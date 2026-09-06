@@ -441,6 +441,15 @@ void SipCoreManager::clearAccount() {
         linphone_account_unref(m_account);
         m_account = nullptr;
     }
+    if (m_core) {
+        // Credentials are stored separately from the account, keyed by
+        // username and domain — removing the account leaves them behind.
+        // After a typo in the password, the stale entry kept being sent and
+        // the registration went on failing with 403 no matter how many times
+        // the user corrected it in Settings; only restarting the app (which
+        // starts with an empty list) worked.
+        linphone_core_clear_all_auth_info(m_core);
+    }
 }
 
 void SipCoreManager::call(const QString &target) {
@@ -996,6 +1005,22 @@ void SipCoreManager::handleCallStateChanged(LinphoneCall *call, LinphoneCallStat
             qInfo().noquote() << "[sip] não perturbe: recusando chamada recebida";
             linphone_call_decline(call, LinphoneReasonBusy);
             emit callAutoHandled(callerId, tr("recusada (não perturbe)"));
+            break;
+        }
+
+        // Single line (D-01): a second call arriving during a conversation is
+        // refused with 486 Busy, letting the PBX roll it to voicemail or the
+        // next extension in the group.
+        //
+        // Taking it over used to be silently destructive: m_activeCall was
+        // reassigned to the newcomer, so when *that* call was released the
+        // release looked like the end of the conversation and the UI dropped
+        // back to idle — while the real call was still up and carrying audio
+        // in both directions, with no way left to hang it up.
+        if (m_activeCall != nullptr || m_consultationCall != nullptr) {
+            qInfo().noquote() << "[sip] linha ocupada: recusando segunda chamada de" << callerId;
+            linphone_call_decline(call, LinphoneReasonBusy);
+            emit callAutoHandled(callerId, tr("recusada (linha ocupada)"));
             break;
         }
 

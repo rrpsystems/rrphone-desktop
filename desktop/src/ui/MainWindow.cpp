@@ -662,9 +662,22 @@ void MainWindow::applyUiCallState(UiCallState state) {
     m_holdButton->setEnabled(inCall);
     // No nested transfers: the button only starts a transfer from a call.
     m_transferButton->setEnabled(inCall);
-    if (!inCall && !consulting) {
+    // The whole transfer flow counts as "still on a call" here. Leaving
+    // dialingTransfer out used to un-hold the call the instant the transfer
+    // screen opened: onTransferClicked() parks the call, then this ran and
+    // unchecked the button, whose toggled() resumed it — so the other party
+    // heard the user picking a destination, which is precisely what the hold
+    // is for.
+    //
+    // The signal blockers matter independently: these buttons are being
+    // synchronised to state here, not operated by the user, so they must not
+    // command the engine on the way.
+    if (!inCall && !consulting && !dialingTransfer) {
+        QSignalBlocker muteBlocker(m_muteButton);
+        QSignalBlocker holdBlocker(m_holdButton);
         m_muteButton->setChecked(false);
         m_holdButton->setChecked(false);
+        m_sipCore->setMuted(false);
     }
 
     // A dimmed-out version of the same colour for the disabled state, so the
@@ -902,6 +915,15 @@ void MainWindow::onIncomingCall(const QString &displayName, const QString &addre
 }
 
 void MainWindow::onCallStateChangedLabel(const QString &stateLabel) {
+    // While the user is composing a transfer or forward target, the hook line
+    // is holding an instruction ("Transferir para qual ramal?"). The engine
+    // keeps reporting its own progress through the same line — parking and
+    // resuming the call both produce labels — and letting those through
+    // replaces the instruction with "Em chamada", leaving the user staring at
+    // an empty field with no idea what it wants.
+    if (m_uiCallState == UiCallState::TransferDialing || m_uiCallState == UiCallState::ForwardDialing) {
+        return;
+    }
     setHookText(stateLabel);
 }
 
@@ -1137,7 +1159,13 @@ void MainWindow::onTransferClicked() {
     // Park the current call before dialing so the other party doesn't hear
     // the keypad, then let the main display double as the target field.
     m_sipCore->setHeld(true);
-    m_holdButton->setChecked(true);
+    {
+        // Reflect the hold in the button without letting it re-command the
+        // engine — a second pause makes liblinphone log "already in the
+        // process of being paused".
+        QSignalBlocker blocker(m_holdButton);
+        m_holdButton->setChecked(true);
+    }
     m_numberEdit->clear();
     setHookText(tr("Transferir para qual ramal?"));
     applyUiCallState(UiCallState::TransferDialing);
