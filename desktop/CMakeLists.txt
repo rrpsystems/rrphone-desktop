@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(RRPSoftphone VERSION 1.0.1 LANGUAGES CXX)
+project(RRPSoftphone VERSION 1.0.2 LANGUAGES CXX)
 
 # Identifies the app to the SIP server (User-Agent header) and in the About
 # information. Bump the project() version above to change it.
