@@ -8,13 +8,24 @@
 
 namespace {
 
-// Not a secret — see the key-model note in ProfileCipher.h. Its job is to make
-// the file unreadable to whoever happens to receive or forward it, not to
-// withstand someone who reads this file.
-const unsigned char kAppKey[32] = {
-    0x8f, 0x2b, 0xd1, 0x74, 0x0a, 0x63, 0xe5, 0x19, 0xc4, 0x7d, 0x36, 0xa8, 0x51, 0xbe, 0x92, 0x0f,
-    0x27, 0xdc, 0x68, 0xb3, 0x4e, 0x15, 0xf7, 0x8a, 0x39, 0xc0, 0x6d, 0x24, 0xab, 0x50, 0xe3, 0x96,
-};
+// Injected at build time from a file that is not in the repository (see
+// RRP_PROFILE_KEY_FILE in CMakeLists.txt). The fallback below is the published
+// development key, so a fresh clone builds and runs without any setup — and,
+// being published, it protects nothing at all.
+//
+// Injecting it keeps the key out of a public repository, which is worth doing.
+// It does NOT make the key secret: it ships inside every binary, on machines
+// this project does not control, and extracting a 32-byte constant from an
+// executable is routine work. The honest description of any build-time key is
+// "raises the cost", never "keeps it confidential".
+#ifndef RRP_PROFILE_KEY_HEX
+#define RRP_PROFILE_KEY_HEX "8f2bd1740a63e519c47d36a851be920f27dc68b34e15f78a39c06d24ab50e396"
+#endif
+
+QByteArray appKey() {
+    static const QByteArray key = QByteArray::fromHex(QByteArrayLiteral(RRP_PROFILE_KEY_HEX));
+    return key;
+}
 
 constexpr int kSaltBytes = 16;
 constexpr int kNonceBytes = 12; // the size GCM is designed around
@@ -32,7 +43,10 @@ const char kAssociatedData[] = "rrpprofile-v3";
 // between them means a passphrase strictly adds entropy: the passphrase-less
 // case is exactly "app key only", and no file is ever weaker than that.
 bool deriveKey(const QString &passphrase, const QByteArray &salt, unsigned char *keyOut) {
-    QByteArray secret(reinterpret_cast<const char *>(kAppKey), sizeof(kAppKey));
+    if (appKey().size() != kKeyBytes) {
+        return false; // malformed RRP_PROFILE_KEY_HEX — refuse rather than use a short key
+    }
+    QByteArray secret = appKey();
     secret.append(passphrase.toUtf8());
 
     const int rc = mbedtls_pkcs5_pbkdf2_hmac_ext(

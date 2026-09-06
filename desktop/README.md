@@ -521,12 +521,32 @@ texto puro, de modo que o arquivo entregava a agenda a quem recebesse o anexo.
 
 Sobre a chave, sem rodeios:
 
-- **Padrão (sem senha):** a chave vem de uma constante compilada no app. Essa
-  constante está neste repositório, que é público — **ela não é secreta**.
-  Qualquer pessoa com o app ou com o código decripta qualquer perfil exportado
-  assim. Trate como *ofuscação com verificação de integridade*: mantém senhas
-  fora da vista de quem abre o anexo num editor de texto, e detecta adulteração.
-  Não torna o arquivo confidencial contra quem quer entrar.
+- **Padrão (sem senha):** a chave é injetada no build. Sem configurar nada, usa
+  a **chave de desenvolvimento publicada** que está em `ProfileCipher.cpp` —
+  então um clone novo compila e funciona, e essa chave não protege nada.
+  Para builds oficiais, crie `desktop/profile_key.txt` (ignorado pelo git):
+
+  ```bash
+  openssl rand -hex 32 > desktop/profile_key.txt
+  ```
+
+  e reconfigure. O CMake avisa qual das duas está em uso.
+
+  Isso tira a chave do repositório público, o que vale a pena. **Não a torna
+  secreta**: ela viaja dentro de todo binário, em máquinas que não
+  controlamos, e extrair 32 bytes de um executável é trabalho de rotina.
+  Trate como *ofuscação com verificação de integridade* — mantém senhas fora
+  da vista de quem abre o anexo num editor de texto e detecta adulteração; não
+  resiste a quem quer entrar.
+
+  Um efeito colateral a ter em mente: **perfis só são intercambiáveis entre
+  builds que compartilham a chave.** Um binário com a chave da RRP não importa
+  um perfil exportado por um build de clone público, e vice-versa.
+
+  Um arquivo `.env` lido em runtime seria pior: texto puro ao lado do `.exe` é
+  mais fácil de ler que uma constante no binário. O paralelo com aplicações web
+  não vale aqui — lá o segredo fica num servidor que você controla; aqui o app
+  roda na máquina do cliente e precisa da chave para funcionar.
 - **Com senha (caixa marcada na exportação):** a senha entra na derivação da
   chave e o arquivo passa a ser de fato confidencial — tão confidencial quanto
   a senha, que precisa viajar por um canal diferente do e-mail que leva o

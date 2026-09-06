@@ -43,6 +43,55 @@ find_library(BCTOOLBOX_LIBRARY
     HINTS "${LINPHONESDK_DIR}/lib" "${LINPHONESDK_DIR}/bin"
 )
 
+# --- .rrpprofile encryption key ----------------------------------------------
+# Kept out of the repository the way a web app keeps secrets out of the tree,
+# but be clear about what that buys: this key ships inside every binary, on
+# machines we do not control, so it raises the cost of reading a profile — it
+# does not make one confidential. For that, export with a passphrase.
+#
+# To use a private key:
+#   openssl rand -hex 32 > desktop/profile_key.txt     (gitignored)
+# then reconfigure. Without the file, the published development key in
+# ProfileCipher.cpp is used, so a fresh clone builds and runs with no setup.
+#
+# NOTE: profiles are only interchangeable between builds sharing a key. A build
+# with RRP's private key cannot import a profile exported by a stock build, and
+# vice versa — which is usually the point.
+set(RRP_PROFILE_KEY_FILE "${CMAKE_CURRENT_SOURCE_DIR}/profile_key.txt"
+    CACHE FILEPATH "File holding 64 hex chars used as the .rrpprofile key")
+
+set(RRP_PROFILE_KEY_DEFINITION "")
+if(EXISTS "${RRP_PROFILE_KEY_FILE}")
+    file(READ "${RRP_PROFILE_KEY_FILE}" RRP_PROFILE_KEY_RAW)
+    # Strip whitespace ourselves: string(STRIP) leaves the CR of a CRLF file
+    # behind, so a key written on Windows would fail the hex check below with a
+    # thoroughly confusing message. Only whitespace is removed — anything else
+    # still has to survive the strict check.
+    string(REGEX REPLACE "[ \t\r\n]" "" RRP_PROFILE_KEY_RAW "${RRP_PROFILE_KEY_RAW}")
+    # Length checked separately because CMake's regex engine has no bounded
+    # repetition: "{64}" is matched literally, so the obvious one-line check
+    # would reject every key, valid or not.
+    string(LENGTH "${RRP_PROFILE_KEY_RAW}" RRP_PROFILE_KEY_LENGTH)
+    if(RRP_PROFILE_KEY_LENGTH EQUAL 64 AND RRP_PROFILE_KEY_RAW MATCHES "^[0-9a-fA-F]+$")
+        set(RRP_PROFILE_KEY_DEFINITION "RRP_PROFILE_KEY_HEX=\"${RRP_PROFILE_KEY_RAW}\"")
+        message(STATUS "RRP: chave privada do .rrpprofile carregada de ${RRP_PROFILE_KEY_FILE}")
+    else()
+        # Failing loudly beats silently falling back: a typo in the key file
+        # would otherwise produce binaries that can't read the profiles the
+        # previous build wrote, with nothing in the log to say why.
+        message(FATAL_ERROR
+            "${RRP_PROFILE_KEY_FILE} deve conter exatamente 64 caracteres hexadecimais "
+            "(32 bytes). Gere com: openssl rand -hex 32")
+    endif()
+else()
+    message(STATUS "RRP: usando a chave de desenvolvimento publicada do .rrpprofile "
+                    "(crie ${RRP_PROFILE_KEY_FILE} para usar uma privada)")
+endif()
+
+if(RRP_PROFILE_KEY_DEFINITION)
+    add_compile_definitions(${RRP_PROFILE_KEY_DEFINITION})
+endif()
+
 # AES-GCM + PBKDF2 for the .rrpprofile file (src/profile/ProfileCipher.cpp).
 # mbedTLS comes with the SDK and its DLL is already shipped alongside the app,
 # so this adds no new dependency to install or redistribute.
