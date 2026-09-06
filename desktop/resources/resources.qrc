@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file>rrp_logo.png</file>
+        <file>icons/mute.svg</file>
+        <file>icons/hold.svg</file>
+        <file>icons/transfer.svg</file>
+        <file>icons/keypad.svg</file>
+        <file>icons/contacts.svg</file>
+        <file>icons/history.svg</file>
+        <file>icons/settings.svg</file>
+        <file>icons/dnd.svg</file>
+        <file>icons/forward.svg</file>
+        <file>icons/speaker.svg</file>
+        <file>icons/mic.svg</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,83 @@
+#pragma once
+
+#include <QDialog>
+#include <QList>
+
+#include "profile/ProfileStore.h"
+#include "profile/SettingsStore.h"
+#include "core/CodecInfo.h"
+
+#include <QPair>
+
+class QLineEdit;
+class QComboBox;
+class QLabel;
+class QListWidget;
+class QCheckBox;
+
+// D-01 (account), D-14 (codecs), D-15 (DTMF method), D-16 (contacts URL),
+// D-13 (profile import/export) — one settings screen for all of the basic
+// configuration the PRD calls for.
+class SettingsDialog : public QDialog {
+    Q_OBJECT
+
+public:
+    explicit SettingsDialog(QWidget *parent = nullptr);
+
+    // Called once at startup (and after import) with the engine's current
+    // codec list, so the dialog has something to show/reorder.
+    void setAvailableCodecs(const QList<CodecInfo> &codecs);
+
+    void setProfile(const AccountProfile &profile);
+    AccountProfile currentProfile() const;
+
+    // Device lists are (id, name) pairs already filtered by capability; the
+    // ringer picks from the playback list.
+    using DeviceList = QList<QPair<QString, QString>>;
+    void setAudioDevices(const DeviceList &captureDevices, const DeviceList &playbackDevices,
+                          const SettingsStore::AudioRouting &current);
+    SettingsStore::AudioRouting audioRouting() const;
+
+    void setCallForwardTarget(const QString &target);
+    QString callForwardTarget() const;
+
+    void setReplaceLocalContacts(bool enabled);
+    bool replaceLocalContacts() const;
+
+    // Feedback for the "Testar som" button.
+    void setAudioTestResult(const QString &message);
+
+signals:
+    // Emitted when the user clicks "Salvar" — MainWindow applies all of it
+    // (account, codecs, DTMF method, contacts URL) to the running SipCoreManager.
+    void settingsApplied(const AccountProfile &profile);
+    // Emitted after a successful import — same handling as settingsApplied,
+    // MainWindow should apply it and this dialog's fields are already updated.
+    void profileImported(const AccountProfile &profile);
+    // "Testar som" was clicked — MainWindow applies the currently selected
+    // devices to the engine and plays a sample through them.
+    void audioTestRequested();
+
+private slots:
+    void onSave();
+    void onImportClicked();
+    void onExportClicked();
+
+private:
+    QListWidget *m_codecList;
+
+    QLineEdit *m_displayNameEdit;
+    QLineEdit *m_usernameEdit;
+    QLineEdit *m_passwordEdit;
+    QLineEdit *m_domainEdit;
+    QComboBox *m_transportCombo;
+    QComboBox *m_dtmfCombo;
+    QLineEdit *m_contactsUrlEdit;
+
+    QComboBox *m_captureDeviceCombo;
+    QComboBox *m_playbackDeviceCombo;
+    QComboBox *m_ringerDeviceCombo;
+    QLabel *m_audioTestLabel;
+    QLineEdit *m_forwardTargetEdit;
+    QCheckBox *m_replaceLocalContactsCheck;
+};
