@@ -94,8 +94,16 @@ só a validação de áudio bidirecional precisa de uma máquina com som).
 
 ### Codecs disponíveis e o caso do G.729
 
-Codecs ativos hoje: **OPUS**, **G.711** (PCMU/PCMA), **G.722**, **GSM**,
-**Speex**, **BV16** e **G.729** — este último adicionado por nós, ver abaixo.
+O app oferece **quatro** codecs, nesta ordem de prioridade: **PCMA**, **PCMU**
+(G.711 a-law/µ-law), **G.729** e **OPUS**. A lista é definida num único lugar,
+`Codecs::supported()` em [`src/core/CodecInfo.cpp`](src/core/CodecInfo.cpp), e
+governa a tela de Configurações, a oferta SDP e o `.rrpprofile` ao mesmo tempo.
+
+O liblinphone habilita mais uma dúzia (Speex em três taxas, GSM, G.722, BV16,
+dois sabores de L16) que nenhum PBX deste parque fala; no startup o app poda os
+payload types do motor para os quatro acima, então eles somem do INVITE também.
+A ordem importa: liderar com OPUS empurraria transcodificação para o Asterisk,
+já que a operadora fala G.711/G.729.
 
 Habilitar G.729 **não é um problema de licença para nós**: o aviso do próprio
 SDK diz que a extensão de licença da bcg729 é exigida apenas *"to create a
@@ -499,18 +507,44 @@ persistência: importar → aplica na hora (registra) → grava em QSettings +
 Credential Manager. Ou seja, **o arquivo é necessário uma única vez**; depois
 disso ele pode ser apagado da máquina e o app continua voltando registrado.
 
+#### Criptografia do arquivo, e o que ela realmente protege
+
+O arquivo é **AES-256-GCM**, com a chave derivada por **PBKDF2-HMAC-SHA256**
+(200 000 iterações, salt de 16 bytes novo a cada arquivo), tudo via mbedTLS —
+que já acompanha o SDK, então não há dependência nova para distribuir. O
+formato é a versão 3; as versões 1 e 2 continuam sendo importadas.
+
+**Todo o conteúdo** vai dentro do envelope cifrado, não só a senha SIP. Isso é
+deliberado: a URL de contatos costuma carregar credenciais próprias
+(`http://usuario:senha@host/...`) e nos formatos anteriores ela era gravada em
+texto puro, de modo que o arquivo entregava a agenda a quem recebesse o anexo.
+
+Sobre a chave, sem rodeios:
+
+- **Padrão (sem senha):** a chave vem de uma constante compilada no app. Essa
+  constante está neste repositório, que é público — **ela não é secreta**.
+  Qualquer pessoa com o app ou com o código decripta qualquer perfil exportado
+  assim. Trate como *ofuscação com verificação de integridade*: mantém senhas
+  fora da vista de quem abre o anexo num editor de texto, e detecta adulteração.
+  Não torna o arquivo confidencial contra quem quer entrar.
+- **Com senha (caixa marcada na exportação):** a senha entra na derivação da
+  chave e o arquivo passa a ser de fato confidencial — tão confidencial quanto
+  a senha, que precisa viajar por um canal diferente do e-mail que leva o
+  arquivo.
+
+A escolha do padrão foi consciente: provisionar uma máquina nova não deveria
+exigir senha nenhuma. A caixa de seleção existe para quando o destino justificar.
+
+Em ambos os casos a cifra é **autenticada**: senha errada, arquivo truncado ou
+um único byte alterado são rejeitados. O placeholder XOR anterior "decriptava"
+lixo alegremente e registrava uma conta quebrada.
+
 O que ainda falta para usar isso como provisionamento de verdade em escala:
 
-1. **Criptografia real do arquivo.** Hoje `ProfileStore.cpp` usa um placeholder
-   (XOR com keystream de SHA-256), claramente marcado no código. Num cenário de
-   provisionamento o arquivo carrega uma senha SIP real e circula pela rede/pen
-   drive, então isso precisa virar AES-GCM com PBKDF2 — viável sem dependência
-   nova, já que o mbedTLS acompanha o SDK (`mbedcrypto.dll`).
-2. **Importação automática.** Hoje exige clicar em Configurações → Importar e
-   digitar a senha do arquivo. Para instalar em várias máquinas o normal é o app
-   procurar sozinho um arquivo de provisionamento (ao lado do `.exe` ou em
-   `%ProgramData%`) na primeira execução, ou aceitar `--import <arquivo>` por
-   linha de comando.
+1. **Importação automática.** Hoje exige clicar em Configurações → Importar.
+   Para instalar em várias máquinas o normal é o app procurar sozinho um arquivo
+   de provisionamento (ao lado do `.exe` ou em `%ProgramData%`) na primeira
+   execução, ou aceitar `--import <arquivo>` por linha de comando.
 3. **Um arquivo por usuário.** Um único arquivo provisiona um único ramal. Para
    vários usuários é preciso gerar um arquivo por pessoa — ou partir para
    provisionamento remoto, que o liblinphone suporta nativamente
@@ -697,13 +731,13 @@ tools/        sip_register_test — utilitário de linha de comando pra testar
 
 ## Known gaps / TODO antes de considerar isto pronto para uso real
 
-- **Segurança do `.rrpprofile` (D-13): a "criptografia" em `ProfileStore.cpp` é um placeholder (XOR com keystream derivado de SHA-256), claramente sinalizado no código.** Precisa ser trocada por AEAD real (AES-256-GCM via OpenSSL/mbedTLS, ambos já linkados transitivamente pelo liblinphone) antes de usar com credenciais de clientes reais.
+- **Chave padrão do `.rrpprofile` é pública (D-13).** O arquivo agora usa AES-256-GCM de verdade, mas a chave padrão está compilada no app e este repositório é aberto: qualquer um decripta um perfil exportado sem senha. É ofuscação com integridade, não sigilo — ver "Criptografia do arquivo" acima. Para credenciais que não podem vazar, exporte com a opção de senha marcada.
 - A identidade conectada (`P-Asserted-Identity`/`Remote-Party-ID`) foi implementada mas **não pôde ser verificada de ponta a ponta**: exige uma chamada realmente atendida, e o ambiente de teste só consegue discar para ramais inexistentes. Depende também de o Asterisk estar configurado para enviá-la.
 - Suporte a controles físicos de headset USB (D-12/HID): não iniciado. Note que isso é diferente do mapeamento de dispositivos de áudio, que já funciona.
 - A metade positiva do cronômetro (começar a contar **quando atendem**) só foi
   verificada por código — falta uma chamada real atendida para confirmar na
   prática. O caso negativo (não contar enquanto chama) foi testado.
-- **Provisionamento em massa** (ver "Provisionamento por arquivo" abaixo): a importação do `.rrpprofile` ainda é manual (Configurações → Importar) e o arquivo usa criptografia placeholder. Para distribuir em várias máquinas faltam auto-importação e criptografia real.
+- **Provisionamento em massa** (ver "Provisionamento por arquivo" abaixo): a importação do `.rrpprofile` ainda é manual (Configurações → Importar). Para distribuir em várias máquinas falta auto-importação.
 - **Sem G.729** (ver seção de codecs) — exigiria recompilar o SDK.
 - Não há seleção de dispositivo de áudio na UI: o app usa o padrão do Windows. Os dispositivos detectados são logados na inicialização (`[audio] dispositivos encontrados: ...`), mas escolher fone/headset específico ainda não dá.
 - Logs do Qt (incluindo o diagnóstico de áudio) só aparecem com `QT_ASSUME_STDERR_HAS_CONSOLE=1`, porque o app é GUI e não tem console. Vale instalar um `qInstallMessageHandler` gravando em arquivo para suporte em campo.

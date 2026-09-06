@@ -43,7 +43,15 @@ find_library(BCTOOLBOX_LIBRARY
     HINTS "${LINPHONESDK_DIR}/lib" "${LINPHONESDK_DIR}/bin"
 )
 
-if(NOT LINPHONE_INCLUDE_DIR OR NOT LINPHONE_LIBRARY OR NOT BCTOOLBOX_LIBRARY)
+# AES-GCM + PBKDF2 for the .rrpprofile file (src/profile/ProfileCipher.cpp).
+# mbedTLS comes with the SDK and its DLL is already shipped alongside the app,
+# so this adds no new dependency to install or redistribute.
+find_library(MBEDCRYPTO_LIBRARY
+    NAMES mbedcrypto
+    HINTS "${LINPHONESDK_DIR}/lib" "${LINPHONESDK_DIR}/bin"
+)
+
+if(NOT LINPHONE_INCLUDE_DIR OR NOT LINPHONE_LIBRARY OR NOT BCTOOLBOX_LIBRARY OR NOT MBEDCRYPTO_LIBRARY)
     message(WARNING
         "liblinphone SDK not fully found (LINPHONESDK_DIR='${LINPHONESDK_DIR}'). "
         "Configure will continue but the build will fail at the compile/link "
@@ -60,6 +68,9 @@ endif()
 if(BCTOOLBOX_LIBRARY)
     target_link_libraries(linphone_sdk INTERFACE "${BCTOOLBOX_LIBRARY}")
 endif()
+if(MBEDCRYPTO_LIBRARY)
+    target_link_libraries(linphone_sdk INTERFACE "${MBEDCRYPTO_LIBRARY}")
+endif()
 
 # --- Application ------------------------------------------------------------
 add_executable(RRPSoftphone WIN32
@@ -67,6 +78,7 @@ add_executable(RRPSoftphone WIN32
     src/core/SipCoreManager.h
     src/core/SipCoreManager.cpp
     src/core/CodecInfo.h
+    src/core/CodecInfo.cpp
     src/core/Logger.h
     src/core/Logger.cpp
     src/contacts/Contact.h
@@ -78,6 +90,8 @@ add_executable(RRPSoftphone WIN32
     src/ui/ContactEditDialog.cpp
     src/profile/ProfileStore.h
     src/profile/ProfileStore.cpp
+    src/profile/ProfileCipher.h
+    src/profile/ProfileCipher.cpp
     src/profile/CredentialStore.h
     src/profile/CredentialStore.cpp
     src/profile/SettingsStore.h
@@ -146,6 +160,7 @@ add_executable(sip_register_test
     src/core/SipCoreManager.h
     src/core/SipCoreManager.cpp
     src/core/CodecInfo.h
+    src/core/CodecInfo.cpp
 )
 target_include_directories(sip_register_test PRIVATE src)
 target_link_libraries(sip_register_test PRIVATE Qt6::Core linphone_sdk)

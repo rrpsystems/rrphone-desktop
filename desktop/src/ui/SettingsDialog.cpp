@@ -152,6 +152,15 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     auto *exportButton = new QPushButton(tr("Exportar configuração..."), this);
     connect(importButton, &QPushButton::clicked, this, &SettingsDialog::onImportClicked);
     connect(exportButton, &QPushButton::clicked, this, &SettingsDialog::onExportClicked);
+    // Off by default: the point of the app-key protection is that provisioning
+    // a new machine takes no password at all.
+    m_exportPassphraseCheck = new QCheckBox(tr("Proteger a exportação com uma senha"), this);
+    m_exportPassphraseCheck->setToolTip(
+        tr("Sem marcar, o arquivo é criptografado com a chave do próprio aplicativo:\n"
+           "qualquer RRP Softphone consegue importá-lo, sem senha nenhuma.\n\n"
+           "Marcando, é preciso definir uma senha — que deve ser enviada por um\n"
+           "canal diferente do arquivo, ou a proteção não serve para nada."));
+
     auto *profileRow = new QHBoxLayout();
     profileRow->addWidget(importButton);
     profileRow->addWidget(exportButton);
@@ -169,6 +178,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     auto *layout = new QVBoxLayout(this);
     layout->addWidget(tabs);
     layout->addLayout(profileRow);
+    layout->addWidget(m_exportPassphraseCheck);
     layout->addLayout(bottomRow);
 }
 
@@ -281,12 +291,16 @@ void SettingsDialog::onImportClicked() {
     if (filePath.isEmpty()) {
         return;
     }
-    bool ok = false;
-    const QString passphrase = QInputDialog::getText(
-        this, tr("Senha do arquivo"), tr("Senha usada ao exportar este arquivo:"),
-        QLineEdit::Password, QString(), &ok);
-    if (!ok) {
-        return;
+    // Only ask when the file itself says it was exported with a passphrase.
+    QString passphrase;
+    if (ProfileStore::requiresPassphrase(filePath)) {
+        bool ok = false;
+        passphrase = QInputDialog::getText(this, tr("Senha do arquivo"),
+                                            tr("Este arquivo foi protegido com senha na exportação:"),
+                                            QLineEdit::Password, QString(), &ok);
+        if (!ok) {
+            return;
+        }
     }
 
     AccountProfile profile;
@@ -307,14 +321,24 @@ void SettingsDialog::onExportClicked() {
     if (filePath.isEmpty()) {
         return;
     }
-    bool ok = false;
-    const QString passphrase = QInputDialog::getText(
-        this, tr("Proteger arquivo com senha"),
-        tr("Defina uma senha para proteger a senha SIP dentro do arquivo:"),
-        QLineEdit::Password, QString(), &ok);
-    if (!ok || passphrase.isEmpty()) {
-        QMessageBox::warning(this, tr("Exportação cancelada"), tr("Uma senha é obrigatória para exportar."));
-        return;
+    // No prompt in the normal case: the file is encrypted with the app's own
+    // key, so any RRP Softphone can import it and nobody has to carry a
+    // password around. A passphrase is opt-in, via the checkbox next to the
+    // button, for when the file is going somewhere sensitive.
+    QString passphrase;
+    if (m_exportPassphraseCheck->isChecked()) {
+        bool ok = false;
+        passphrase = QInputDialog::getText(this, tr("Senha do arquivo"),
+                                            tr("Senha para proteger este arquivo.\n"
+                                               "Ela terá que ser informada na importação, e precisa\n"
+                                               "ser enviada por um canal diferente do arquivo."),
+                                            QLineEdit::Password, QString(), &ok);
+        if (!ok || passphrase.isEmpty()) {
+            QMessageBox::warning(this, tr("Exportação cancelada"),
+                                  tr("Nenhuma senha informada. Desmarque a opção para exportar "
+                                     "com a proteção padrão do aplicativo."));
+            return;
+        }
     }
 
     QString error;

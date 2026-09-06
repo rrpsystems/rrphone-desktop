@@ -78,6 +78,7 @@ private:
     QComboBox *m_playbackDeviceCombo;
     QComboBox *m_ringerDeviceCombo;
     QLabel *m_audioTestLabel;
+    QCheckBox *m_exportPassphraseCheck;
     QLineEdit *m_forwardTargetEdit;
     QCheckBox *m_replaceLocalContactsCheck;
 };

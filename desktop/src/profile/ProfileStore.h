@@ -7,13 +7,11 @@
 
 // D-13 — import/export of a single account "backup" profile.
 //
-// SECURITY NOTE (see README.md "Known gaps"): the passphrase-based
-// obfuscation used here (see ProfileStore.cpp) is a PLACEHOLDER, not
-// production-grade encryption. It exists so the import/export UI flow can be
-// built and exercised end-to-end now. It MUST be replaced with a real AEAD
-// cipher (e.g. AES-256-GCM via OpenSSL/mbedTLS — both already linked
-// transitively through liblinphone) before this app is used with real
-// customer SIP credentials.
+// The file is AES-256-GCM with a PBKDF2-derived key; the whole account goes
+// inside the encrypted payload, including the contacts URL, which routinely
+// carries HTTP credentials of its own. See ProfileCipher.h for the key model
+// — in particular, why a profile exported without a passphrase is obfuscated
+// rather than confidential.
 struct AccountProfile {
     QString displayName;
     QString username;
@@ -43,4 +41,8 @@ public:
                                const QString &passphrase,
                                AccountProfile *profileOut,
                                QString *errorOut = nullptr);
+
+    // Whether importing this file needs a passphrase from the user. Lets the
+    // UI skip the prompt entirely for the common case (app-key protection).
+    static bool requiresPassphrase(const QString &filePath);
 };

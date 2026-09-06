@@ -126,6 +126,12 @@ void SipCoreManager::start() {
     m_iterateTimer->start(20); // liblinphone-recommended desktop iterate interval
     m_statsTick.start();
 
+    // Prune the engine's payload list down to what this app offers, in the
+    // order that suits this deployment (narrowband first — the carrier is
+    // G.711/G.729, and leading with OPUS would only push transcoding onto the
+    // PBX). A saved profile overrides this afterwards.
+    setAudioCodecsOrder(Codecs::supported());
+
     configureG729();
     configureSounds();
     logAudioDevices();
@@ -602,7 +608,11 @@ QList<CodecInfo> SipCoreManager::audioCodecs() const {
         info.clockRate = linphone_payload_type_get_clock_rate(payload);
         info.channels = linphone_payload_type_get_channels(payload);
         info.enabled = linphone_payload_type_enabled(payload);
-        result.append(info);
+        // Everything the engine knows but this app doesn't offer is dropped
+        // here, so the settings list and the SDP offer stay short.
+        if (Codecs::isSupported(info)) {
+            result.append(info);
+        }
     }
     bctbx_list_free_with_data(codecs, reinterpret_cast<bctbx_list_free_func>(linphone_payload_type_unref));
     return result;
