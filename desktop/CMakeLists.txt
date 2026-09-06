@@ -162,6 +162,7 @@ add_executable(RRPSoftphone WIN32
     src/history/CallHistoryStore.h
     src/history/CallHistoryStore.cpp
     resources/resources.qrc
+    resources/rrp.rc
 )
 
 target_include_directories(RRPSoftphone PRIVATE src)

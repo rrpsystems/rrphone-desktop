@@ -266,6 +266,35 @@ share/Ortp/cmake/OrtpConfig.cmake
 share/BZRTP/cmake/BZRTPConfig.cmake
 ```
 
+### Chamada recebida: quem chama a atenção, e como
+
+O Windows **não deixa** um processo em segundo plano roubar o foreground.
+`raise()`/`activateWindow()` vindos de um app que não está em primeiro plano
+são silenciosamente ignorados — por isso a janela subia quando estava
+minimizada (desminimizar é permitido) e não subia quando havia outra
+aplicação na frente. Não é um defeito do app; é política do sistema, e os
+contornos que existem envolvem forjar foco de entrada.
+
+Em vez de brigar com isso, o padrão adota o comportamento: **notificar sem
+interromper**.
+
+- Toque no dispositivo escolhido para toque.
+- Notificação do Windows com quem está chamando. **Clicar nela** traz o app
+  para frente — um clique é ativação legítima, que o sistema honra.
+- `FlashWindowEx` piscando o botão na barra de tarefas até a janela ser
+  ativada. Esta parte é o que torna o modo discreto utilizável: sem ela, uma
+  chamada tocando atrás de outra janela se anuncia só pelo áudio.
+
+Em **Configurações → Chamadas → Ao receber chamada** dá para trocar para
+"Trazer a janela para frente". O tooltip avisa que o Windows pode recusar.
+
+**Botões de Atender/Recusar dentro da notificação** não são possíveis por esse
+caminho: `QSystemTrayIcon::showMessage` não os oferece. Exigiriam a API WinRT
+de Toast Notifications, com AppUserModelID registrado e um *COM activator* no
+registro para receber o clique de volta — bastante infraestrutura para um app
+não empacotado. Fica como evolução possível; hoje o clique na notificação leva
+à janela, onde os botões estão.
+
 ### Chamada em espera (D-17)
 
 Duas chamadas podem coexistir: uma no ar (`m_activeCall`) e uma estacionada

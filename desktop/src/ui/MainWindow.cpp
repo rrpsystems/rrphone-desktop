@@ -33,6 +33,12 @@
 #include "contacts/LocalContactsStore.h"
 #include "history/CallHistoryStore.h"
 
+#ifdef Q_OS_WIN
+// Depois dos headers do Qt de propósito: windows.h define macros (min/max e
+// afins) que colidem com o Qt quando incluído antes.
+#include <windows.h>
+#endif
+
 namespace {
 // D-11 autostart: Qt's NativeFormat QSettings maps straight onto the
 // Windows registry, no <windows.h> needed.
@@ -566,6 +572,15 @@ void MainWindow::setupTrayIcon() {
             }
         }
     });
+    // Clicking the "chamada recebida" notification is the user consenting to
+    // switch — and a click *is* a foreground activation Windows honours, so
+    // this is the reliable way to reach the call from another app.
+    connect(m_trayIcon, &QSystemTrayIcon::messageClicked, this, [this]() {
+        showNormal();
+        raise();
+        activateWindow();
+    });
+
     m_trayIcon->show();
 }
 
@@ -949,9 +964,43 @@ void MainWindow::onIncomingCall(const QString &displayName, const QString &addre
 
     setHookText(tr("Chamada recebida"));
     applyUiCallState(UiCallState::Incoming);
-    showNormal();
-    raise();
-    activateWindow();
+    announceIncomingCall(who);
+}
+
+// How a ringing call asks for attention. Windows refuses to let a background
+// process steal the foreground, so activateWindow() alone silently does
+// nothing when another app is in front — which is why the window used to pop
+// up only when it was minimised. Rather than fight that (the workarounds all
+// involve faking input focus), the default leans into it: notify clearly and
+// let the user decide when to switch.
+void MainWindow::announceIncomingCall(const QString &who) {
+    // Un-minimising is always allowed, and is what the user expects when the
+    // app is out of the way. It doesn't take focus from anything.
+    if (isMinimized() || !isVisible()) {
+        showNormal();
+    }
+
+    if (SettingsStore::loadIncomingCallBehavior() == SettingsStore::IncomingCallBehavior::BringToFront) {
+        raise();
+        activateWindow();
+    }
+
+    if (m_trayIcon->isVisible()) {
+        m_trayIcon->showMessage(tr("Chamada recebida"), who, QSystemTrayIcon::Information, 20000);
+    }
+
+#ifdef Q_OS_WIN
+    // Flashes the taskbar button until the window is activated. This is the
+    // piece that makes "don't steal focus" workable: without it a call ringing
+    // behind another window is easy to miss, since only the audio announces it.
+    FLASHWINFO flash = {};
+    flash.cbSize = sizeof(flash);
+    flash.hwnd = reinterpret_cast<HWND>(winId());
+    flash.dwFlags = FLASHW_ALL | FLASHW_TIMERNOFG;
+    flash.uCount = 0;
+    flash.dwTimeout = 0;
+    FlashWindowEx(&flash);
+#endif
 }
 
 void MainWindow::onCallStateChangedLabel(const QString &stateLabel) {
@@ -1345,6 +1394,7 @@ void MainWindow::onSettingsRequested() {
     }
     m_settingsDialog->setAudioDevices(captureDevices, playbackDevices, SettingsStore::loadAudioRouting());
     m_settingsDialog->setCallForwardTarget(m_forwardTarget);
+    m_settingsDialog->setIncomingCallBehavior(SettingsStore::loadIncomingCallBehavior());
     m_settingsDialog->setReplaceLocalContacts(SettingsStore::loadReplaceLocalContacts());
 
     m_settingsDialog->exec();
@@ -1375,6 +1425,7 @@ void MainWindow::onSettingsApplied(const AccountProfile &profile) {
     SettingsStore::saveAudioRouting(routing);
 
     applyForwardTarget(m_settingsDialog->callForwardTarget());
+    SettingsStore::saveIncomingCallBehavior(m_settingsDialog->incomingCallBehavior());
     SettingsStore::saveReplaceLocalContacts(m_settingsDialog->replaceLocalContacts());
 }
 

@@ -112,6 +112,9 @@ private:
     // state and status line always move together.
     void applyForwardTarget(const QString &target);
     void recordCallInHistory();
+    // Ringing-call attention: notification, taskbar flash and, if the user
+    // chose it, bringing the window forward.
+    void announceIncomingCall(const QString &who);
     // Most recent outgoing number, for the redial gesture. Empty if none.
     QString lastDialedNumber() const;
     void setAutoStartEnabled(bool enabled);

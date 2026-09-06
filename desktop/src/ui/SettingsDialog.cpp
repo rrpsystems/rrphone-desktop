@@ -136,7 +136,17 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     m_forwardTargetEdit->setPlaceholderText(tr("ex.: 2130"));
     m_forwardTargetEdit->setAccessibleName(tr("Encaminhar chamadas para"));
 
+    m_incomingBehaviorCombo = new QComboBox(this);
+    m_incomingBehaviorCombo->addItem(tr("Notificar sem interromper"), "notify");
+    m_incomingBehaviorCombo->addItem(tr("Trazer a janela para frente"), "front");
+    m_incomingBehaviorCombo->setToolTip(
+        tr("Notificando, o app avisa pelo toque, por uma notificação do Windows e\n"
+           "piscando na barra de tarefas, sem tirar o foco do que você está fazendo.\n\n"
+           "Trazendo para frente, ele tenta assumir a tela. O Windows pode recusar:\n"
+           "o sistema bloqueia que um programa em segundo plano roube o foco."));
+
     auto *callsForm = new QFormLayout();
+    callsForm->addRow(tr("Ao receber chamada"), m_incomingBehaviorCombo);
     callsForm->addRow(tr("Encaminhar chamadas para"), m_forwardTargetEdit);
     callsForm->addRow(new QLabel(tr("Toda chamada recebida vai direto para esse ramal,\n"
                                      "sem tocar aqui. Deixe em branco para desativar."), this));
@@ -386,4 +396,18 @@ void SettingsDialog::onExportClicked() {
         return;
     }
     QMessageBox::information(this, tr("Exportado"), tr("Configuração exportada com sucesso."));
+}
+
+void SettingsDialog::setIncomingCallBehavior(SettingsStore::IncomingCallBehavior behavior) {
+    const QString key = behavior == SettingsStore::IncomingCallBehavior::BringToFront
+                             ? QStringLiteral("front")
+                             : QStringLiteral("notify");
+    const int index = m_incomingBehaviorCombo->findData(key);
+    m_incomingBehaviorCombo->setCurrentIndex(index >= 0 ? index : 0);
+}
+
+SettingsStore::IncomingCallBehavior SettingsDialog::incomingCallBehavior() const {
+    return m_incomingBehaviorCombo->currentData().toString() == QLatin1String("front")
+               ? SettingsStore::IncomingCallBehavior::BringToFront
+               : SettingsStore::IncomingCallBehavior::Notify;
 }

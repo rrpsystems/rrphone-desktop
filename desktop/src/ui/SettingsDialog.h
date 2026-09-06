@@ -41,6 +41,9 @@ public:
     void setCallForwardTarget(const QString &target);
     QString callForwardTarget() const;
 
+    void setIncomingCallBehavior(SettingsStore::IncomingCallBehavior behavior);
+    SettingsStore::IncomingCallBehavior incomingCallBehavior() const;
+
     void setReplaceLocalContacts(bool enabled);
     bool replaceLocalContacts() const;
 
@@ -82,6 +85,7 @@ private:
     QComboBox *m_captureDeviceCombo;
     QComboBox *m_playbackDeviceCombo;
     QComboBox *m_ringerDeviceCombo;
+    QComboBox *m_incomingBehaviorCombo;
     QLabel *m_audioTestLabel;
     QLabel *m_ringtoneLabel;
     QString m_ringtonePath; // empty = the ringtone shipped with the app

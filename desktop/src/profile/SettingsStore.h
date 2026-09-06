@@ -29,6 +29,13 @@ public:
         // Empty = the ringtone shipped with the app.
         QString ringtonePath;
     };
+    // O que uma chamada recebida faz com a janela. Notificar é o padrão: o
+    // Windows bloqueia roubo de foco de qualquer forma, e interromper quem
+    // está no meio de outra tarefa raramente é bem-vindo.
+    enum class IncomingCallBehavior { Notify, BringToFront };
+    static void saveIncomingCallBehavior(IncomingCallBehavior behavior);
+    static IncomingCallBehavior loadIncomingCallBehavior();
+
     static void saveAudioRouting(const AudioRouting &routing);
     static AudioRouting loadAudioRouting();
 

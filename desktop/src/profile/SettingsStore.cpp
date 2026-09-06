@@ -155,3 +155,16 @@ void SettingsStore::loadVolumes(int *speakerPercent, int *micPercent) {
         *micPercent = settings.value(kKeyMicVolume, *micPercent).toInt();
     }
 }
+
+void SettingsStore::saveIncomingCallBehavior(IncomingCallBehavior behavior) {
+    QSettings settings;
+    settings.setValue("calls/incomingBehavior",
+                       behavior == IncomingCallBehavior::BringToFront ? "front" : "notify");
+}
+
+SettingsStore::IncomingCallBehavior SettingsStore::loadIncomingCallBehavior() {
+    QSettings settings;
+    return settings.value("calls/incomingBehavior").toString() == QLatin1String("front")
+               ? IncomingCallBehavior::BringToFront
+               : IncomingCallBehavior::Notify;
+}
