@@ -1,0 +1,43 @@
+// Recursos Windows do executável. Gerado pelo CMake a partir de rrp.rc.in —
+// não edite o arquivo gerado.
+
+// --- Ícone -------------------------------------------------------------------
+// QIcon/setWindowIcon() só valem em tempo de execução, dentro do processo. O
+// Explorer, o atalho da área de trabalho e o botão da barra de tarefas leem o
+// ícone do arquivo .exe — sem este recurso eles mostram o ícone genérico do
+// Windows, mesmo com a janela e a bandeja exibindo a logo corretamente.
+//
+// O menor ID numérico é o que o shell do Windows adota como ícone do
+// aplicativo, então este precisa ser o primeiro.
+#define IDI_APPICON 1
+IDI_APPICON ICON "@CMAKE_CURRENT_SOURCE_DIR@/resources/rrp.ico"
+
+// --- Informações de versão ---------------------------------------------------
+// É o que aparece em Propriedades → Detalhes, e é como o suporte descobre qual
+// build está numa máquina sem precisar abrir o app. Sem este bloco os campos
+// ficam vazios e um executável é indistinguível de outro.
+1 VERSIONINFO
+FILEVERSION    @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+PRODUCTVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0
+FILEOS         0x40004L
+FILETYPE       0x1L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        // 0416 = português do Brasil, 04b0 = Unicode.
+        BLOCK "041604b0"
+        BEGIN
+            VALUE "CompanyName",      "RRP Systems"
+            VALUE "FileDescription",  "RRP Softphone"
+            VALUE "FileVersion",      "@PROJECT_VERSION@"
+            VALUE "InternalName",     "RRPSoftphone"
+            VALUE "OriginalFilename", "RRPSoftphone.exe"
+            VALUE "ProductName",      "RRP Softphone"
+            VALUE "ProductVersion",   "@PROJECT_VERSION@"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x416, 1200
+    END
+END

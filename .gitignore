@@ -30,3 +30,4 @@ desktop/profile_key.txt
 # geradas a partir do build, não fonte.
 desktop/dist/
 desktop/installer/Output/
+desktop/installer/version.iss

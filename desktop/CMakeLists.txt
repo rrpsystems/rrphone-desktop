@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(RRPSoftphone VERSION 1.0.0 LANGUAGES CXX)
+project(RRPSoftphone VERSION 1.0.1 LANGUAGES CXX)
 
 # Identifies the app to the SIP server (User-Agent header) and in the About
 # information. Bump the project() version above to change it.
@@ -121,6 +121,11 @@ if(MBEDCRYPTO_LIBRARY)
     target_link_libraries(linphone_sdk INTERFACE "${MBEDCRYPTO_LIBRARY}")
 endif()
 
+# Recursos Windows (ícone + informações de versão) gerados a partir do template,
+# para que a versão venha de project() e não de uma cópia manual.
+configure_file("${CMAKE_CURRENT_SOURCE_DIR}/resources/rrp.rc.in"
+               "${CMAKE_CURRENT_BINARY_DIR}/rrp.rc" @ONLY)
+
 # --- Application ------------------------------------------------------------
 add_executable(RRPSoftphone WIN32
     src/main.cpp
@@ -162,7 +167,7 @@ add_executable(RRPSoftphone WIN32
     src/history/CallHistoryStore.h
     src/history/CallHistoryStore.cpp
     resources/resources.qrc
-    resources/rrp.rc
+    "${CMAKE_CURRENT_BINARY_DIR}/rrp.rc"
 )
 
 target_include_directories(RRPSoftphone PRIVATE src)
@@ -338,3 +343,11 @@ install(CODE "
 if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/vc_redist.x64.exe")
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/vc_redist.x64.exe" DESTINATION "redist")
 endif()
+
+# A versão do instalador vem daqui, não de uma cópia no .iss. Manter o mesmo
+# número em dois arquivos é uma sincronização que uma hora falha, e o sintoma
+# é péssimo: instaladores com o mesmo nome e conteúdos diferentes circulando
+# entre as máquinas, sem como saber o que está instalado onde.
+file(WRITE "${CMAKE_CURRENT_SOURCE_DIR}/installer/version.iss"
+     "; Gerado pelo CMake -- nao edite. Altere project(... VERSION) no CMakeLists.txt.\n"
+     "#define AppVersion \"${PROJECT_VERSION}\"\n")

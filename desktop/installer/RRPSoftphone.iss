@@ -12,7 +12,9 @@
 ; A saída fica em installer\Output\.
 
 #define AppName        "RRP Softphone"
-#define AppVersion     "1.0.0"
+; A versão vem do CMake (version.iss é gerado ao configurar), para não haver
+; duas cópias do mesmo número podendo divergir.
+#include "version.iss"
 #define AppPublisher   "RRP Systems"
 #define AppExe         "RRPSoftphone.exe"
 #define DistDir        "..\dist"
