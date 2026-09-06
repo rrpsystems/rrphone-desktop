@@ -244,6 +244,17 @@ if(LINPHONESDK_DIR AND EXISTS "${LINPHONESDK_DIR}/share")
     endforeach()
 endif()
 
+# Our own ringtone. liblinphone plays the ring from a real file path, so it
+# cannot come from the Qt resource bundle like the icons do — it has to sit on
+# disk next to the executable.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/resources/sounds")
+    add_custom_command(TARGET RRPSoftphone POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_CURRENT_SOURCE_DIR}/resources/sounds"
+            "$<TARGET_FILE_DIR:RRPSoftphone>/sounds"
+    )
+endif()
+
 # mediastreamer plugins — this is where the Windows audio driver lives
 # (libmswasapi) along with the echo canceller (libmswebrtc). They are NOT in
 # the SDK's bin/ folder, so without copying them the app has no sound card

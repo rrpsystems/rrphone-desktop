@@ -134,6 +134,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     m_sipCore->setCaptureDevice(routing.captureId);
     m_sipCore->setPlaybackDevice(routing.playbackId);
     m_sipCore->setRingerDevice(routing.ringerId);
+    m_sipCore->setRingtoneFile(routing.ringtonePath);
 
     bool savedDnd = false;
     QString savedForward;
@@ -1149,6 +1150,18 @@ void MainWindow::onSettingsRequested() {
         connect(m_settingsDialog, &SettingsDialog::profileImported, this, &MainWindow::onSettingsApplied);
         // "Testar som": route to whatever is selected right now — without
         // saving — so the user can try devices until one is audible.
+        // "Ouvir": apply the pending ringtone choice and play it, so the user
+        // hears the actual file before committing to it.
+        connect(m_settingsDialog, &SettingsDialog::ringtonePreviewRequested, this, [this]() {
+            const SettingsStore::AudioRouting routing = m_settingsDialog->audioRouting();
+            m_sipCore->setRingerDevice(routing.ringerId);
+            if (!m_sipCore->setRingtoneFile(routing.ringtonePath)) {
+                QMessageBox::warning(m_settingsDialog, tr("Toque inválido"),
+                                      tr("Não foi possível usar esse arquivo. Escolha um WAV."));
+                return;
+            }
+            m_sipCore->playRingtonePreview();
+        });
         connect(m_settingsDialog, &SettingsDialog::audioTestRequested, this, [this]() {
             const SettingsStore::AudioRouting routing = m_settingsDialog->audioRouting();
             m_sipCore->setPlaybackDevice(routing.playbackId);
@@ -1193,10 +1206,17 @@ void MainWindow::onSettingsApplied(const AccountProfile &profile) {
     // Audio routing and forwarding live outside AccountProfile on purpose:
     // they are machine/user preferences, not part of the account that gets
     // shipped in a .rrpprofile.
-    const SettingsStore::AudioRouting routing = m_settingsDialog->audioRouting();
+    SettingsStore::AudioRouting routing = m_settingsDialog->audioRouting();
     m_sipCore->setCaptureDevice(routing.captureId);
     m_sipCore->setPlaybackDevice(routing.playbackId);
     m_sipCore->setRingerDevice(routing.ringerId);
+    if (!m_sipCore->setRingtoneFile(routing.ringtonePath)) {
+        // Don't persist a file we just failed to load: it would come back on
+        // every launch and leave incoming calls silent with no explanation.
+        QMessageBox::warning(this, tr("Toque inválido"),
+                              tr("O arquivo de toque escolhido não pôde ser lido; o padrão foi mantido."));
+        routing.ringtonePath.clear();
+    }
     SettingsStore::saveAudioRouting(routing);
 
     applyForwardTarget(m_settingsDialog->callForwardTarget());

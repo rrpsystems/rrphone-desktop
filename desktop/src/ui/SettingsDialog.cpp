@@ -14,6 +14,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QFileInfo>
 
 namespace {
 constexpr int RoleMimeType = Qt::UserRole;
@@ -86,11 +87,40 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     testRow->addWidget(testSoundButton);
     testRow->addWidget(m_audioTestLabel, 1);
 
+    // Ringtone file. Taste in ring sounds is personal enough that shipping one
+    // default and calling it done is a losing bet.
+    m_ringtoneLabel = new QLabel(tr("Padrão do aplicativo"), this);
+    m_ringtoneLabel->setWordWrap(true);
+    auto *ringtoneBrowse = new QPushButton(tr("Escolher..."), this);
+    auto *ringtoneReset = new QPushButton(tr("Padrão"), this);
+    auto *ringtonePlay = new QPushButton(tr("Ouvir"), this);
+    connect(ringtoneBrowse, &QPushButton::clicked, this, [this]() {
+        const QString path = QFileDialog::getOpenFileName(this, tr("Escolher toque"), QString(),
+                                                           tr("Áudio WAV (*.wav)"));
+        if (!path.isEmpty()) {
+            m_ringtonePath = path;
+            updateRingtoneLabel();
+        }
+    });
+    connect(ringtoneReset, &QPushButton::clicked, this, [this]() {
+        m_ringtonePath.clear();
+        updateRingtoneLabel();
+    });
+    connect(ringtonePlay, &QPushButton::clicked, this, [this]() { emit ringtonePreviewRequested(); });
+
+    auto *ringtoneRow = new QHBoxLayout();
+    ringtoneRow->addWidget(ringtoneBrowse);
+    ringtoneRow->addWidget(ringtoneReset);
+    ringtoneRow->addWidget(ringtonePlay);
+    ringtoneRow->addStretch();
+
     auto *deviceForm = new QFormLayout();
     deviceForm->addRow(tr("Microfone"), m_captureDeviceCombo);
     deviceForm->addRow(tr("Alto-falante (chamada)"), m_playbackDeviceCombo);
     deviceForm->addRow(tr("Toque (chamada recebida)"), m_ringerDeviceCombo);
     deviceForm->addRow(QString(), testRow);
+    deviceForm->addRow(tr("Som do toque"), m_ringtoneLabel);
+    deviceForm->addRow(QString(), ringtoneRow);
 
     auto *audioLayout = new QVBoxLayout();
     audioLayout->addLayout(deviceForm);
@@ -250,6 +280,14 @@ void SettingsDialog::setAudioDevices(const DeviceList &captureDevices, const Dev
     fill(m_captureDeviceCombo, captureDevices, current.captureId);
     fill(m_playbackDeviceCombo, playbackDevices, current.playbackId);
     fill(m_ringerDeviceCombo, playbackDevices, current.ringerId);
+    m_ringtonePath = current.ringtonePath;
+    updateRingtoneLabel();
+}
+
+void SettingsDialog::updateRingtoneLabel() {
+    m_ringtoneLabel->setText(m_ringtonePath.isEmpty() ? tr("Padrão do aplicativo")
+                                                       : QFileInfo(m_ringtonePath).fileName());
+    m_ringtoneLabel->setToolTip(m_ringtonePath);
 }
 
 void SettingsDialog::setAudioTestResult(const QString &message) {
@@ -261,6 +299,7 @@ SettingsStore::AudioRouting SettingsDialog::audioRouting() const {
     routing.captureId = m_captureDeviceCombo->currentData().toString();
     routing.playbackId = m_playbackDeviceCombo->currentData().toString();
     routing.ringerId = m_ringerDeviceCombo->currentData().toString();
+    routing.ringtonePath = m_ringtonePath;
     return routing;
 }
 

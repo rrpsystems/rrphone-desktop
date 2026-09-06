@@ -57,11 +57,16 @@ signals:
     // "Testar som" was clicked — MainWindow applies the currently selected
     // devices to the engine and plays a sample through them.
     void audioTestRequested();
+    // "Ouvir" — MainWindow applies the pending ringtone choice and plays it.
+    void ringtonePreviewRequested();
 
 private slots:
     void onSave();
     void onImportClicked();
     void onExportClicked();
+
+private:
+    void updateRingtoneLabel();
 
 private:
     QListWidget *m_codecList;
@@ -78,6 +83,8 @@ private:
     QComboBox *m_playbackDeviceCombo;
     QComboBox *m_ringerDeviceCombo;
     QLabel *m_audioTestLabel;
+    QLabel *m_ringtoneLabel;
+    QString m_ringtonePath; // empty = the ringtone shipped with the app
     QCheckBox *m_exportPassphraseCheck;
     QLineEdit *m_forwardTargetEdit;
     QCheckBox *m_replaceLocalContactsCheck;

@@ -149,7 +149,22 @@ void SipCoreManager::configureSounds() {
         return;
     }
     const QString soundsDir = QDir(QCoreApplication::applicationDirPath() + "/share/sounds/linphone").absolutePath();
-    m_ringPath = soundsDir + QStringLiteral("/rings/oldphone-mono.wav");
+    // Ringtones shipped next to the executable, in order of preference. The
+    // SDK's own pleasant rings are all .mkv (undecodable here, see above) and
+    // the only WAV among them is a literal old telephone bell — kept as the
+    // last resort so there is always *some* ring.
+    // See resources/sounds/README.md for where each file comes from.
+    const QStringList ringCandidates = {
+        QDir(QCoreApplication::applicationDirPath() + "/sounds/ring_rrp.wav").absolutePath(),
+        soundsDir + QStringLiteral("/rings/oldphone-mono.wav"),
+    };
+    m_ringPath.clear();
+    for (const QString &candidate : ringCandidates) {
+        if (QFile::exists(candidate)) {
+            m_ringPath = candidate;
+            break;
+        }
+    }
     const QString ringbackPath = soundsDir + QStringLiteral("/ringback.wav");
     m_testSoundPath = soundsDir + QStringLiteral("/hello8000.wav");
 
@@ -158,11 +173,11 @@ void SipCoreManager::configureSounds() {
     // ringer setting (headset users keep the ring on the PC speakers).
     linphone_core_set_native_ringing_enabled(m_core, FALSE);
 
-    if (QFile::exists(m_ringPath)) {
+    if (!m_ringPath.isEmpty()) {
         linphone_core_set_ring(m_core, m_ringPath.toUtf8().constData());
     } else {
-        qWarning().noquote() << "[audio] toque não encontrado:" << m_ringPath;
-        m_ringPath.clear();
+        qWarning().noquote() << "[audio] nenhum arquivo de toque encontrado em"
+                             << QCoreApplication::applicationDirPath() + "/sounds";
     }
     if (QFile::exists(ringbackPath)) {
         linphone_core_set_ringback(m_core, ringbackPath.toUtf8().constData());
@@ -189,6 +204,41 @@ void SipCoreManager::configureSounds() {
 // call. This is the "Testar som" button in the audio settings: it is the only
 // way for a user to tell an unusable output device apart from a SIP/media
 // problem, and it is also the fastest diagnostic we can ask them to run.
+// An empty path restores the ringtone that ships with the app. A file the
+// engine cannot decode would leave incoming calls silent, which is exactly the
+// failure this whole area started with — so the choice is refused rather than
+// applied, and the caller tells the user.
+bool SipCoreManager::setRingtoneFile(const QString &path) {
+    if (!m_core) {
+        return false;
+    }
+    if (path.isEmpty()) {
+        configureSounds();
+        return true;
+    }
+    if (!QFile::exists(path)) {
+        return false;
+    }
+    linphone_core_set_ring(m_core, path.toUtf8().constData());
+    m_ringPath = path;
+    qInfo().noquote() << "[audio] toque definido pelo usuário:" << path;
+    return true;
+}
+
+QString SipCoreManager::ringtoneFile() const {
+    const char *ring = m_core != nullptr ? linphone_core_get_ring(m_core) : nullptr;
+    return QString::fromUtf8(ring != nullptr ? ring : "");
+}
+
+// Plays the current ringtone through the ringer device, so the user can hear
+// what a call will sound like without waiting for one.
+bool SipCoreManager::playRingtonePreview() {
+    if (!m_core || m_ringPath.isEmpty()) {
+        return false;
+    }
+    return linphone_core_play_local(m_core, m_ringPath.toUtf8().constData()) == 0;
+}
+
 bool SipCoreManager::playTestSound() {
     if (!m_core || m_testSoundPath.isEmpty()) {
         return false;

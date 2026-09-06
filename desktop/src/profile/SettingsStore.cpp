@@ -98,6 +98,7 @@ void SettingsStore::saveAudioRouting(const AudioRouting &routing) {
     settings.setValue("audio/captureDevice", routing.captureId);
     settings.setValue("audio/playbackDevice", routing.playbackId);
     settings.setValue("audio/ringerDevice", routing.ringerId);
+    settings.setValue("audio/ringtonePath", routing.ringtonePath);
     settings.sync();
     // Logged because an audio device that silently fails to persist looks
     // exactly like one that was never chosen — and the difference matters when
@@ -115,6 +116,7 @@ SettingsStore::AudioRouting SettingsStore::loadAudioRouting() {
     routing.captureId = settings.value("audio/captureDevice").toString();
     routing.playbackId = settings.value("audio/playbackDevice").toString();
     routing.ringerId = settings.value("audio/ringerDevice").toString();
+    routing.ringtonePath = settings.value("audio/ringtonePath").toString();
     return routing;
 }
 

@@ -373,9 +373,22 @@ O toque padrão do liblinphone é um `.mkv`, mas o pacote Windows do SDK **não
 traz o plugin Matroska** — o motor escolhe um arquivo que não consegue
 decodificar e a chamada entra em silêncio absoluto. Isso aparece só como um
 aviso fácil de ignorar (`No ringtone has been defined in sound config, using
-default one`). Por isso `configureSounds()` aponta o toque para
-`rings/oldphone-mono.wav` e o ringback para `ringback.wav`, WAVs que vêm na
-mesma pasta.
+default one`).
+
+Por isso `configureSounds()` aponta explicitamente para arquivos WAV. O toque
+padrão é o nosso [`resources/sounds/ring_rrp.wav`](resources/sounds/README.md),
+copiado para `<pasta do .exe>/sounds` no build; se ele faltar, cai no
+`rings/oldphone-mono.wav` do SDK — que funciona, mas é literalmente uma
+campainha de telefone antigo. O ringback usa o `ringback.wav` do SDK.
+
+O usuário pode trocar o toque por qualquer WAV em **Configurações → Áudio →
+Som do toque**, com um botão "Ouvir" que toca pelo dispositivo de toque
+escolhido. Um arquivo ilegível é recusado na hora e **não** é persistido:
+gravar um toque quebrado deixaria as chamadas recebidas mudas a cada
+inicialização, que é exatamente o defeito descrito acima.
+
+O toque precisa ser um arquivo de verdade em disco — o liblinphone recebe um
+caminho, então ele não pode vir do bundle de recursos do Qt como os ícones.
 
 O DTMF é outro caso: como ele viaja out-of-band (RFC 2833), nada é ouvido
 localmente a menos que o app peça — daí `linphone_core_play_dtmf()` no

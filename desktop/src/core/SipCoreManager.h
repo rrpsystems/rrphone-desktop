@@ -80,6 +80,13 @@ public:
     // start playback, which is the signal that the output device is unusable.
     bool playTestSound();
 
+    // Ringtone file. Empty path restores the one shipped with the app.
+    // Returns false when the file is missing, so the UI can say so instead of
+    // leaving incoming calls silent.
+    bool setRingtoneFile(const QString &path);
+    QString ringtoneFile() const;
+    bool playRingtonePreview();
+
     // Volume controls, exposed as 0..100 for the UI sliders. liblinphone
     // works in dB, so the percentage is mapped onto -30 dB .. +10 dB, which
     // puts unity gain (0 dB, i.e. "untouched audio") at 75%.

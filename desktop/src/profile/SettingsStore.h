@@ -26,6 +26,8 @@ public:
         QString captureId;
         QString playbackId;
         QString ringerId;
+        // Empty = the ringtone shipped with the app.
+        QString ringtonePath;
     };
     static void saveAudioRouting(const AudioRouting &routing);
     static AudioRouting loadAudioRouting();
