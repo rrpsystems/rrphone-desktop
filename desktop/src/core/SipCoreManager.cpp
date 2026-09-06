@@ -652,20 +652,43 @@ QString SipCoreManager::playbackDeviceName() const {
 }
 
 namespace {
-// Slider percent <-> liblinphone gain in dB. Linear in dB (which is how
-// volume actually "feels"), spanning -30 dB (near silent) to +10 dB (boost),
-// with 0 dB — untouched audio — landing at 75%.
-constexpr float kMinGainDb = -30.0f;
-constexpr float kMaxGainDb = 10.0f;
+// Slider percent <-> liblinphone gain in dB, linear in dB because that is how
+// loudness is actually perceived.
+//
+// The range used to be -30 dB .. +10 dB, which put the whole bottom half of
+// the slider between x0.32 and x0.03 amplitude — after the codec and the far
+// end's own gain, that reads as "no audio at all" and the usable travel was
+// squeezed into the top half. 40 dB is simply too much span for a 100-step
+// control.
+//
+// -18 dB .. +6 dB keeps unity (0 dB, untouched audio) at the same 75% mark
+// while making the lower half useful: 50% is -6 dB, clearly quieter but
+// perfectly audible, and 25% is -12 dB.
+constexpr float kMinGainDb = -18.0f;
+constexpr float kMaxGainDb = 6.0f;
+
+// Zero on a volume control has to mean silence. With the floor now at a
+// usable -18 dB it no longer does on its own, so the bottom of the travel is
+// special-cased. This is not the mute button: the mute state stays whatever
+// the user set it to, and the slider can be brought back up at any time.
+constexpr float kSilentGainDb = -60.0f;
 
 float percentToGainDb(int percent) {
-    const float clamped = qBound(0, percent, 100) / 100.0f;
-    return kMinGainDb + clamped * (kMaxGainDb - kMinGainDb);
+    const int clampedPercent = qBound(0, percent, 100);
+    if (clampedPercent == 0) {
+        return kSilentGainDb;
+    }
+    return kMinGainDb + (clampedPercent / 100.0f) * (kMaxGainDb - kMinGainDb);
 }
 
 int gainDbToPercent(float gainDb) {
+    if (gainDb <= kSilentGainDb) {
+        return 0; // matches the silence special case above
+    }
     const float ratio = (gainDb - kMinGainDb) / (kMaxGainDb - kMinGainDb);
-    return qBound(0, qRound(ratio * 100.0f), 100);
+    // Never reports 0 for a gain that still makes sound: a slider that reads
+    // zero while audio is audible is worse than a rounding error.
+    return qBound(1, qRound(ratio * 100.0f), 100);
 }
 } // namespace
 
