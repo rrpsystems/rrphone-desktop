@@ -1,0 +1,22 @@
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Desktop (Qt/CMake) build output — any build-* / build dir, not just "build"
+# (e.g. build-msvc/, build-mingw/), so it doesn't matter what a kit names it.
+desktop/build*/
+desktop/**/CMakeFiles/
+desktop/**/CMakeCache.txt
+desktop/**/*.autosave
+desktop/**/*_autogen/
+
+# Local, machine-specific — never commit real SIP credentials
+*.rrpprofile
+
+# liblinphone SDK — huge (100s of MB, includes .pdb debug symbols) and
+# downloadable from https://download.linphone.org/releases/windows/sdk/,
+# never belongs in git history.
+desktop/third_party/
+linphone-sdk*.zip
