@@ -234,13 +234,25 @@ endif()
 # it, linphone_factory_create_core_3() aborts the process (bctbx-fatal) the
 # moment it tries to parse a vCard grammar. SipCoreManager::start() points
 # liblinphone at "<exe dir>/share", so that folder needs to exist there too.
+#
+# Only three subfolders of the SDK's share/ are needed at runtime — copying the
+# whole thing drags in 274 MB of API documentation and the liblinphone/
+# mediastreamer test suites, which would end up in the installer:
+#   belr/     as gramáticas SIP/SDP/vCard (a ausência delas aborta o processo)
+#   linphone/ rootca.pem, para TLS
+#   sounds/   ringback e o toque de reserva
+set(RRP_SDK_SHARE_DIRS belr linphone sounds)
 if(LINPHONESDK_DIR AND EXISTS "${LINPHONESDK_DIR}/share")
     foreach(target_name RRPSoftphone sip_register_test)
-        add_custom_command(TARGET ${target_name} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${LINPHONESDK_DIR}/share"
-                "$<TARGET_FILE_DIR:${target_name}>/share"
-        )
+        foreach(share_dir ${RRP_SDK_SHARE_DIRS})
+            if(EXISTS "${LINPHONESDK_DIR}/share/${share_dir}")
+                add_custom_command(TARGET ${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_directory
+                        "${LINPHONESDK_DIR}/share/${share_dir}"
+                        "$<TARGET_FILE_DIR:${target_name}>/share/${share_dir}"
+                )
+            endif()
+        endforeach()
     endforeach()
 endif()
 
@@ -281,4 +293,47 @@ if(LINPHONESDK_DIR AND MS_PLUGINS_TO_SHIP)
                 "$<TARGET_FILE_DIR:${target_name}>/plugins"
         )
     endforeach()
+endif()
+
+# --- Empacotamento ----------------------------------------------------------
+# `cmake --install build-msvc --prefix dist` monta uma árvore limpa e pronta
+# para rodar, que é o que o instalador (installer/RRPSoftphone.iss) empacota.
+#
+# Não dá para simplesmente zipar a pasta de build: ela tem centenas de MB de
+# CMakeFiles/, *_autogen/ e a ferramenta de teste de registro, nada disso
+# distribuível.
+#
+# Os arquivos vêm da pasta de build porque é lá que os passos de POST_BUILD
+# acima (windeployqt, DLLs do SDK, share/, plugins/, sounds/) depositam tudo —
+# o gerador é single-config (Ninja), então o diretório é previsível.
+install(TARGETS RRPSoftphone RUNTIME DESTINATION .)
+
+# Subpastas de runtime. OPTIONAL porque quais existem depende do que o
+# windeployqt decidiu copiar para esta versão do Qt.
+foreach(runtime_dir plugins sounds platforms styles imageformats
+                     iconengines networkinformation tls generic)
+    install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/${runtime_dir}/"
+            DESTINATION "${runtime_dir}" OPTIONAL)
+endforeach()
+
+# Os .mkv do SDK ficam de fora: são os toques que o pacote Windows não consegue
+# decodificar (sem plugin Matroska), então são 8 MB de arquivos inúteis.
+install(DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/share/"
+        DESTINATION "share" OPTIONAL
+        PATTERN "*.mkv" EXCLUDE)
+
+# As DLLs são coletadas na hora da instalação, e não listadas aqui: a relação
+# muda conforme a versão do Qt e do SDK, e uma lista fixa envelheceria em
+# silêncio — o app só falharia ao abrir na máquina do cliente.
+install(CODE "
+    file(GLOB _rrp_runtime_dlls \"${CMAKE_CURRENT_BINARY_DIR}/*.dll\")
+    file(INSTALL \${_rrp_runtime_dlls} DESTINATION \"\${CMAKE_INSTALL_PREFIX}\")
+")
+
+# O app é compilado com /MD, então depende do runtime do Visual C++. Ele não é
+# copiado como DLL solta: o instalador executa este redistribuível, que é a
+# forma suportada pela Microsoft e mantém as atualizações de segurança do
+# runtime a cargo do Windows Update.
+if(EXISTS "${CMAKE_CURRENT_BINARY_DIR}/vc_redist.x64.exe")
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/vc_redist.x64.exe" DESTINATION "redist")
 endif()

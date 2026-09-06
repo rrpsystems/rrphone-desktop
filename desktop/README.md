@@ -68,7 +68,9 @@ abaixo já foram corrigidos (não são mais um risco, é só histórico):
   "top resources dir" (gramáticas SIP/SDP/vCard, sons, CA root) — sem isso
   ele aborta o processo na criação do `LinphoneCore`. Resolvido com
   `linphone_factory_set_top_resources_dir()` apontando para `<pasta do
-  .exe>/share`, e o `CMakeLists.txt` copia `share/` do SDK pra lá no build.
+  .exe>/share`, e o `CMakeLists.txt` copia para lá as três subpastas do SDK
+  que são usadas em execução — `belr/`, `linphone/` e `sounds/` (ver "Gerando
+  o instalador" para por que não se copia o `share/` inteiro).
 
 **Registro SIP testado contra o PBX real da RRP** (`escritorio.rrpsystems.com.br:5090`,
 ramal 2125), das duas formas: pela ferramenta de linha de comando
@@ -681,6 +683,63 @@ build-msvc/RRPSoftphone.exe
 O build roda `windeployqt` automaticamente, então a pasta `build-msvc/` fica
 **autossuficiente**: dá para dar duplo clique no `.exe`, ou zipar a pasta
 inteira e mandar para outra máquina Windows, sem precisar do Qt instalado lá.
+
+## Gerando o instalador
+
+Duas etapas: montar uma árvore limpa e empacotá-la.
+
+```bash
+cmake --install build-msvc --prefix dist
+```
+
+```bash
+"%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" installer\RRPSoftphone.iss
+```
+
+O resultado é `installer\Output\RRPSoftphone-<versão>-setup.exe`, um arquivo
+único de ~58 MB. O Inno Setup se instala com
+`winget install JRSoftware.InnoSetup`.
+
+**Não zipe `build-msvc/`.** Ela tem ~400 MB de `CMakeFiles/`, `*_autogen/` e a
+ferramenta `sip_register_test.exe`, nada disso distribuível. O passo
+`cmake --install` existe justamente para separar o que roda do que só serve
+para compilar; `dist/` fica em ~124 MB.
+
+### O que o instalador resolve, e por quê
+
+- **Runtime do Visual C++.** O app é compilado com `/MD`, então numa máquina
+  sem o runtime 2015-2022 ele simplesmente não abre — sem mensagem útil. O
+  instalador executa o `vc_redist.x64.exe` (que o `windeployqt` já deixa na
+  pasta de build), e o pula quando o runtime já está presente, porque ele
+  demora vários segundos mesmo sem ter o que fazer.
+- **Recursos do SDK, sem o peso.** Só três subpastas de `share/` são usadas em
+  execução: `belr/` (as gramáticas SIP/SDP/vCard, cuja ausência **aborta o
+  processo**), `linphone/` (rootca.pem) e `sounds/` (ringback e toque de
+  reserva). O resto são 274 MB de documentação da API e suítes de teste. Os
+  `.mkv` também ficam de fora — sem o plugin Matroska eles não tocam.
+- **App aberto durante a atualização.** `CloseApplications=yes` fecha o
+  softphone antes de sobrescrever os arquivos.
+- **Dados do usuário sobrevivem à desinstalação.** Conta, histórico, contatos
+  locais e a senha (Gerenciador de Credenciais) ficam fora da pasta de
+  instalação e são preservados de propósito: desinstalar para instalar uma
+  versão nova não deve apagar os dados de ninguém.
+
+Não há opção de "iniciar com o Windows" no instalador, e isso é deliberado: a
+instalação roda como administrador, então uma escrita em `HKCU` cairia no
+perfil do administrador e não no do usuário que atende as chamadas. O ajuste
+existe no menu da bandeja do próprio app, onde ele roda com a identidade certa.
+
+### Assinatura de código (pendente)
+
+O instalador **não é assinado**, então o SmartScreen mostra "O Windows
+protegeu o computador" e exige clicar em "Mais informações → Executar assim
+mesmo". Isso foi adiado conscientemente enquanto a distribuição é interna
+(ver Seção 4 do PRD Lite). Para distribuição externa é preciso um certificado
+de assinatura de código (OV ou EV) e acrescentar `SignTool` ao `[Setup]`.
+
+O `AppId` no `.iss` **não deve mudar entre versões**: é ele que faz o Windows
+reconhecer uma instalação existente e atualizá-la. Trocá-lo instala a nova
+versão ao lado da antiga.
 
 ## Rodando para testar
 

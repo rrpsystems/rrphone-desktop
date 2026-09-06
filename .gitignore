@@ -25,3 +25,8 @@ linphone-sdk*.zip
 # RRP_PROFILE_KEY_FILE in desktop/CMakeLists.txt). Never commit it — and note
 # that it is not a true secret either, since it ships inside the binary.
 desktop/profile_key.txt
+
+# Árvore de distribuição (cmake --install) e a saída do Inno Setup: ambas são
+# geradas a partir do build, não fonte.
+desktop/dist/
+desktop/installer/Output/
