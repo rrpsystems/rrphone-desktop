@@ -168,3 +168,19 @@ SettingsStore::IncomingCallBehavior SettingsStore::loadIncomingCallBehavior() {
                ? IncomingCallBehavior::BringToFront
                : IncomingCallBehavior::Notify;
 }
+
+void SettingsStore::saveAudioProcessing(const AudioProcessing &processing) {
+    QSettings settings;
+    settings.setValue("audio/noiseSuppression", processing.noiseSuppression);
+    settings.setValue("audio/echoCancellation", processing.echoCancellation);
+    settings.setValue("audio/agc", processing.automaticGainControl);
+}
+
+SettingsStore::AudioProcessing SettingsStore::loadAudioProcessing() {
+    QSettings settings;
+    AudioProcessing processing;
+    processing.noiseSuppression = settings.value("audio/noiseSuppression", false).toBool();
+    processing.echoCancellation = settings.value("audio/echoCancellation", true).toBool();
+    processing.automaticGainControl = settings.value("audio/agc", false).toBool();
+    return processing;
+}

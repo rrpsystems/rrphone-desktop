@@ -459,6 +459,25 @@ O DTMF é outro caso: como ele viaja out-of-band (RFC 2833), nada é ouvido
 localmente a menos que o app peça — daí `linphone_core_play_dtmf()` no
 `sendDtmf()`.
 
+#### Processamento do microfone
+
+Três filtros, todos aplicados **ao montar o stream de áudio** — mudar qualquer
+um vale a partir da próxima chamada, não na que está em curso. Ficam em
+Configurações → Áudio, e o rótulo na tela avisa disso.
+
+| | Padrão | Motivo |
+|---|---|---|
+| Cancelamento de eco | **Ligado** | Sem ele quem usa a caixa do PC devolve eco para o outro lado. Ver a seção acima sobre a troca do filtro. |
+| Supressão de ruído | **Desligada** | Ver abaixo. |
+| AGC | **Desligado** | Nivela o volume da voz — útil quando as pessoas sentam a distâncias diferentes do microfone —, mas levanta o ruído de fundo nas pausas, o que numa sala compartilhada costuma ser pior que uma voz desigual. |
+
+A supressão de ruído (`MSNoiseSuppressor`, embutido no `mediastreamer2.dll`)
+vem **desligada de propósito**, e não por limitação: em teste com voz real a
+perda de qualidade foi audível. O filtro funciona removendo o que julga não ser
+voz, e nisso come parte da naturalidade do timbre. Em sala silenciosa ele só
+custa qualidade; em ambiente barulhento compensa. Como o trade-off depende do
+ambiente de cada usuário, a decisão é dele — o padrão é não processar.
+
 #### Cancelador de eco
 
 O padrão (`MSWebRTCAEC`) não roda abaixo de 16 kHz e **se desativa sozinho em

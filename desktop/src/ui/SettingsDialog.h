@@ -38,6 +38,9 @@ public:
                           const SettingsStore::AudioRouting &current);
     SettingsStore::AudioRouting audioRouting() const;
 
+    void setAudioProcessing(const SettingsStore::AudioProcessing &processing);
+    SettingsStore::AudioProcessing audioProcessing() const;
+
     void setCallForwardTarget(const QString &target);
     QString callForwardTarget() const;
 
@@ -86,6 +89,9 @@ private:
     QComboBox *m_playbackDeviceCombo;
     QComboBox *m_ringerDeviceCombo;
     QComboBox *m_incomingBehaviorCombo;
+    QCheckBox *m_noiseSuppressionCheck;
+    QCheckBox *m_echoCancellationCheck;
+    QCheckBox *m_agcCheck;
     QLabel *m_audioTestLabel;
     QLabel *m_ringtoneLabel;
     QString m_ringtonePath; // empty = the ringtone shipped with the app

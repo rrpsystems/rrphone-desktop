@@ -75,6 +75,18 @@ public:
     void sendDtmf(char digit);
     void playLocalDtmf(char digit);
 
+    // Microphone-side processing. Applied when the audio stream is built, so a
+    // change only takes effect on the next call.
+    struct AudioProcessing {
+        // Desligada por padrão: melhora ambiente ruidoso, mas custa
+        // naturalidade da voz. Ver SipCoreManager::start().
+        bool noiseSuppression = false;
+        bool echoCancellation = true;
+        bool automaticGainControl = false;
+    };
+    void setAudioProcessing(const AudioProcessing &processing);
+    AudioProcessing audioProcessing() const;
+
     // Plays a short sound through the current output device without needing a
     // call — the "Testar som" button. Returns false if the engine refused to
     // start playback, which is the signal that the output device is unusable.
@@ -186,6 +198,7 @@ signals:
 private:
     void iterate();
     void logAudioDevices();
+    void logAudioProcessing();
     void configureG729();
     void configureSounds();
     void applyAccountConfig(const AccountConfig &config);

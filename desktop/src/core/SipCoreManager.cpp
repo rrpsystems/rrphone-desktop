@@ -186,6 +186,14 @@ void SipCoreManager::configureSounds() {
         m_testSoundPath = m_ringPath;
     }
 
+    // Supressão de ruído desligada por padrão. O filtro funciona removendo o
+    // que julga não ser voz, e nesse processo come parte da naturalidade do
+    // timbre — perda audível e confirmada em teste. Num ambiente silencioso
+    // ele só tira qualidade; num barulhento compensa. Como o trade-off depende
+    // do ambiente de cada um, quem decide é o usuário, em Configurações.
+    // Aplicado ao montar o stream, então mudar isso só vale da próxima chamada.
+    linphone_core_enable_noise_suppression(m_core, FALSE);
+
     // The default echo canceller (MSWebRTCAEC) refuses to run below 16 kHz and
     // simply disables itself on every narrowband call — which here is every
     // call, since the carrier speaks G.711/G.729. The result is no echo
@@ -198,6 +206,44 @@ void SipCoreManager::configureSounds() {
     qInfo().noquote() << "[audio] toque:" << QString::fromUtf8(ring != nullptr ? ring : "(nenhum)")
                       << "| cancelador de eco:"
                       << QString::fromUtf8(linphone_core_get_echo_canceller_filter_name(m_core));
+    logAudioProcessing();
+}
+
+// Microphone-side processing. All three are applied when the audio stream is
+// built, so a change takes effect on the *next* call — the UI says so rather
+// than letting the user think it did nothing.
+void SipCoreManager::setAudioProcessing(const AudioProcessing &processing) {
+    if (!m_core) {
+        return;
+    }
+    linphone_core_enable_noise_suppression(m_core, processing.noiseSuppression ? TRUE : FALSE);
+    linphone_core_enable_echo_cancellation(m_core, processing.echoCancellation ? TRUE : FALSE);
+    // AGC evens out how loud the user comes through — useful when people sit
+    // at different distances from the mic. Off by default because it also
+    // raises background noise during pauses, which in a shared room is worse
+    // than an uneven voice.
+    linphone_core_enable_agc(m_core, processing.automaticGainControl ? TRUE : FALSE);
+    logAudioProcessing();
+}
+
+SipCoreManager::AudioProcessing SipCoreManager::audioProcessing() const {
+    AudioProcessing processing;
+    if (m_core) {
+        processing.noiseSuppression = linphone_core_noise_suppression_enabled(m_core);
+        processing.echoCancellation = linphone_core_echo_cancellation_enabled(m_core);
+        processing.automaticGainControl = linphone_core_agc_enabled(m_core);
+    }
+    return processing;
+}
+
+void SipCoreManager::logAudioProcessing() {
+    if (!m_core) {
+        return;
+    }
+    const auto onOff = [](bool on) { return on ? QStringLiteral("ligado") : QStringLiteral("desligado"); };
+    qInfo().noquote() << "[audio] supressão de ruído:" << onOff(linphone_core_noise_suppression_enabled(m_core))
+                      << "| cancelamento de eco:" << onOff(linphone_core_echo_cancellation_enabled(m_core))
+                      << "| AGC:" << onOff(linphone_core_agc_enabled(m_core));
 }
 
 // Plays a short sound through the current output device, without needing a

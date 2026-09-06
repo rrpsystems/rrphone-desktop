@@ -122,8 +122,34 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     deviceForm->addRow(tr("Som do toque"), m_ringtoneLabel);
     deviceForm->addRow(QString(), ringtoneRow);
 
+    // Processamento do microfone. Vale valer explicitamente porque cada um tem
+    // um custo: o supressor come um pouco da naturalidade da voz, e o AGC
+    // levanta o ruído de fundo nas pausas.
+    m_noiseSuppressionCheck = new QCheckBox(tr("Supressão de ruído"), this);
+    m_noiseSuppressionCheck->setToolTip(
+        tr("Reduz teclado, ar-condicionado e conversa de fundo no que você envia.\n\n"
+           "Vem desligada: o filtro remove o que julga não ser voz e, nisso, tira um\n"
+           "pouco da naturalidade do timbre. Em sala silenciosa só custa qualidade;\n"
+           "em ambiente barulhento compensa. Ligue se o seu caso for o segundo."));
+    m_echoCancellationCheck = new QCheckBox(tr("Cancelamento de eco"), this);
+    m_echoCancellationCheck->setToolTip(
+        tr("Evita que o outro lado ouça a própria voz de volta.\n"
+           "Essencial para quem usa a caixa de som do PC; com headset, pouco muda."));
+    m_agcCheck = new QCheckBox(tr("Controle automático de ganho (AGC)"), this);
+    m_agcCheck->setToolTip(
+        tr("Nivela o volume da sua voz, útil quando as pessoas sentam a distâncias\n"
+           "diferentes do microfone. Em compensação, levanta o ruído de fundo nas\n"
+           "pausas — por isso vem desligado."));
+
+    auto *processingLabel = new QLabel(
+        tr("Processamento do microfone (vale a partir da próxima chamada):"), this);
+
     auto *audioLayout = new QVBoxLayout();
     audioLayout->addLayout(deviceForm);
+    audioLayout->addWidget(processingLabel);
+    audioLayout->addWidget(m_noiseSuppressionCheck);
+    audioLayout->addWidget(m_echoCancellationCheck);
+    audioLayout->addWidget(m_agcCheck);
     audioLayout->addWidget(new QLabel(tr("Codecs de áudio (prioridade e habilitação):"), this));
     audioLayout->addWidget(m_codecList);
     audioLayout->addWidget(new QLabel(tr("Método de DTMF:"), this));
@@ -410,4 +436,18 @@ SettingsStore::IncomingCallBehavior SettingsDialog::incomingCallBehavior() const
     return m_incomingBehaviorCombo->currentData().toString() == QLatin1String("front")
                ? SettingsStore::IncomingCallBehavior::BringToFront
                : SettingsStore::IncomingCallBehavior::Notify;
+}
+
+void SettingsDialog::setAudioProcessing(const SettingsStore::AudioProcessing &processing) {
+    m_noiseSuppressionCheck->setChecked(processing.noiseSuppression);
+    m_echoCancellationCheck->setChecked(processing.echoCancellation);
+    m_agcCheck->setChecked(processing.automaticGainControl);
+}
+
+SettingsStore::AudioProcessing SettingsDialog::audioProcessing() const {
+    SettingsStore::AudioProcessing processing;
+    processing.noiseSuppression = m_noiseSuppressionCheck->isChecked();
+    processing.echoCancellation = m_echoCancellationCheck->isChecked();
+    processing.automaticGainControl = m_agcCheck->isChecked();
+    return processing;
 }

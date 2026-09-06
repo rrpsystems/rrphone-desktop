@@ -146,6 +146,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     m_sipCore->setRingerDevice(routing.ringerId);
     m_sipCore->setRingtoneFile(routing.ringtonePath);
 
+    const SettingsStore::AudioProcessing savedProcessing = SettingsStore::loadAudioProcessing();
+    m_sipCore->setAudioProcessing({savedProcessing.noiseSuppression, savedProcessing.echoCancellation,
+                                   savedProcessing.automaticGainControl});
+
     bool savedDnd = false;
     QString savedForward;
     SettingsStore::loadCallHandling(&savedDnd, &savedForward);
@@ -1395,6 +1399,7 @@ void MainWindow::onSettingsRequested() {
     m_settingsDialog->setAudioDevices(captureDevices, playbackDevices, SettingsStore::loadAudioRouting());
     m_settingsDialog->setCallForwardTarget(m_forwardTarget);
     m_settingsDialog->setIncomingCallBehavior(SettingsStore::loadIncomingCallBehavior());
+    m_settingsDialog->setAudioProcessing(SettingsStore::loadAudioProcessing());
     m_settingsDialog->setReplaceLocalContacts(SettingsStore::loadReplaceLocalContacts());
 
     m_settingsDialog->exec();
@@ -1426,6 +1431,11 @@ void MainWindow::onSettingsApplied(const AccountProfile &profile) {
 
     applyForwardTarget(m_settingsDialog->callForwardTarget());
     SettingsStore::saveIncomingCallBehavior(m_settingsDialog->incomingCallBehavior());
+
+    const SettingsStore::AudioProcessing processing = m_settingsDialog->audioProcessing();
+    SettingsStore::saveAudioProcessing(processing);
+    m_sipCore->setAudioProcessing({processing.noiseSuppression, processing.echoCancellation,
+                                   processing.automaticGainControl});
     SettingsStore::saveReplaceLocalContacts(m_settingsDialog->replaceLocalContacts());
 }
 

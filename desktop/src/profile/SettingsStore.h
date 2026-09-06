@@ -36,6 +36,16 @@ public:
     static void saveIncomingCallBehavior(IncomingCallBehavior behavior);
     static IncomingCallBehavior loadIncomingCallBehavior();
 
+    // Processamento do microfone. Só o cancelamento de eco vem ligado: supressão
+    // de ruído e AGC melhoram ambientes específicos e custam qualidade de voz.
+    struct AudioProcessing {
+        bool noiseSuppression = false;
+        bool echoCancellation = true;
+        bool automaticGainControl = false;
+    };
+    static void saveAudioProcessing(const AudioProcessing &processing);
+    static AudioProcessing loadAudioProcessing();
+
     static void saveAudioRouting(const AudioRouting &routing);
     static AudioRouting loadAudioRouting();
 
