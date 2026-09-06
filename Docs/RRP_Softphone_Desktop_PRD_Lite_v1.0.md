@@ -29,7 +29,7 @@ Um softphone desktop Windows simples, estável, com **transferência de chamada 
 
 | ID | Funcionalidade | Prior. | Descrição |
 |----|----------------|--------|-----------|
-| D-01 | Registro SIP (conta única) | Must | Servidor, ramal/usuário, senha, transporte (UDP/TCP/TLS/WSS) |
+| D-01 | Registro SIP (conta única) | Must | Servidor, ramal/usuário, senha, transporte (UDP/TCP/TLS/WSS). Uma conta só, mas **duas chamadas simultâneas** — ver "Chamada em espera" abaixo. |
 | D-02 | Chamada efetuada | Must | Discagem por teclado numérico ou campo de texto (ramal ou número externo) |
 | D-03 | Chamada recebida | Must | Notificação/toast + janela de chamada, atender/recusar |
 | D-04 | Mute / Hold | Must | Controles durante chamada ativa |
@@ -46,6 +46,28 @@ Um softphone desktop Windows simples, estável, com **transferência de chamada 
 | D-16 | Lista de contatos remota via URL (XML) | Must | App baixa um XML de uma URL configurável e popula a agenda local — formato herdado do MicroSip (Seção 8). **Não é um recurso do liblinphone**: é lógica de app (HTTP GET + parse), independente do SDK. |
 
 **Nota sobre D-09 (múltiplas linhas):** removido do MVP por decisão do produto — conta única, estilo MicroSip. A transferência com consulta (D-06) **não depende** de múltiplas linhas/contas: liblinphone suporta nativamente duas chamadas simultâneas na mesma conta registrada (uma em espera, outra de consulta), então múltiplas linhas fica como possível evolução de UI, não como pré-requisito técnico do D-06.
+
+### D-17 — Chamada em espera (acrescentado após os testes de campo)
+
+Este requisito **não estava neste PRD** e surgiu de uso real: com uma linha
+estritamente única, quem ligasse para um ramal já em conversa recebia ocupado.
+Num escritório isso costuma ser pior que um aviso discreto, sobretudo se o PBX
+não tiver correio de voz configurado para o ramal.
+
+Não é multi-linha, e explicitamente **não** traz os botões de linha que foram
+retirados da interface: no máximo duas chamadas coexistem, que é o que telefone
+de mesa e celular fazem há décadas com um único botão de alternar.
+
+- Uma segunda chamada durante a conversa é **anunciada**, não atendida nem
+  recusada: um bipe discreto (não o toque cheio, que falaria por cima da
+  conversa) e o nome de quem chama na linha de gancho.
+- **Atender** coloca a conversa atual em espera automaticamente.
+- **Recusar** manda 486 Busy só para a nova; a conversa em curso não é tocada.
+- **Alternar** troca qual das duas está no ar.
+- **Desligar** encerra a que está no ar e **retoma a outra**, em vez de deixar
+  o usuário sem chamada nenhuma.
+- Uma **terceira** chamada recebe 486 Busy. Duas é o limite que cabe sem virar
+  um produto diferente.
 
 ### Fora de Escopo (neste PRD)
 

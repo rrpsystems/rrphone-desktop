@@ -104,6 +104,15 @@ public:
     //    same gesture works whether or not the user waited to talk first.
     // cancelAttendedTransfer(): drops the consultation leg and resumes the
     //    original call instead.
+    // Call waiting (at most two calls: one talking, one parked). Answering
+    // parks the current conversation; declining refuses only the newcomer.
+    void answerWaitingCall();
+    void declineWaitingCall();
+    // Swaps which of the two calls is in the foreground.
+    void swapCalls();
+    bool hasWaitingCall() const { return m_waitingCall != nullptr; }
+    bool hasHeldCall() const { return m_heldCall != nullptr; }
+
     void beginAttendedTransfer(const QString &target);
     void completeAttendedTransfer();
     void cancelAttendedTransfer();
@@ -156,6 +165,15 @@ signals:
     // whenever the PBX tells us it changed.
     void remotePartyChanged(const QString &displayName, const QString &number);
     void callEnded();
+    // A second call arrived during a conversation and is waiting for a
+    // decision — the conversation in progress is untouched.
+    void callWaiting(const QString &displayName, const QString &number);
+    // The waiting call is gone: the caller gave up, or it was declined.
+    void waitingCallEnded();
+    // The parked party hung up while we were talking to the other one.
+    void heldCallEnded();
+    // The foreground call ended and the parked one was brought back.
+    void heldCallPromoted();
     // An incoming call that never reached the user because DND or forwarding
     // handled it. Emitted so it still shows up in the history — otherwise
     // those calls vanish without a trace.
@@ -174,6 +192,9 @@ private:
     // Reads the connected party from the SIP signalling and emits
     // remotePartyChanged when it differs from what was last reported.
     void publishRemoteParty(LinphoneCall *call);
+    void promoteHeldCall();
+    // Emits a progress label only when it refers to the call in the foreground.
+    void emitForegroundLabel(const LinphoneCall *call, const QString &label);
     void handleGlobalStateChanged(LinphoneGlobalState state, const char *message);
     void handleRegistrationStateChanged(LinphoneProxyConfig *cfg, LinphoneRegistrationState state, const char *message);
     void handleCallStateChanged(LinphoneCall *call, LinphoneCallState state, const char *message);
@@ -192,6 +213,8 @@ private:
     LinphoneAccount *m_account = nullptr;
     LinphoneCall *m_activeCall = nullptr;       // call A
     LinphoneCall *m_consultationCall = nullptr; // call C, only during a transfer (D-06)
+    LinphoneCall *m_heldCall = nullptr;         // parked call, during call waiting
+    LinphoneCall *m_waitingCall = nullptr;      // ringing second call, not yet answered
     QString m_transferTarget;                   // kept for the blind-transfer fallback
     bool m_consultationAnswered = false;
     bool m_doNotDisturb = false;

@@ -49,6 +49,10 @@ private slots:
     void onCallConnected();
     void onRemotePartyChanged(const QString &displayName, const QString &number);
     void onCallEnded();
+    void onCallWaiting(const QString &displayName, const QString &number);
+    void onWaitingCallEnded();
+    void onHeldCallEnded();
+    void onHeldCallPromoted();
     void onCallAutoHandled(const QString &fromAddress, const QString &note);
     // Dial a number picked from the contacts or history lists.
     void startCallTo(const QString &number);
@@ -81,7 +85,10 @@ private:
     // dialog with blind/attended options: the user picks the destination and
     // then either completes or cancels, and whether it ends up consultative
     // or blind depends only on whether the target picked up.
-    enum class UiCallState { Idle, Incoming, Active, TransferDialing, TransferConsulting, ForwardDialing };
+    // CallWaiting: talking to one person while a second call rings for a
+    // decision. TwoCalls: both answered, one parked, swappable.
+    enum class UiCallState { Idle, Incoming, Active, CallWaiting, TwoCalls,
+                              TransferDialing, TransferConsulting, ForwardDialing };
 
     QWidget *buildStatusRow();
     QWidget *buildDisplayArea();
@@ -158,6 +165,11 @@ private:
     QString m_currentCallPeer;          // what was dialed / who called
     QString m_currentCallConnectedPeer; // who actually answered, when different
     QString m_currentCallDisplayName;
+    // The second caller, while call waiting is on screen.
+    QString m_waitingPeer;
+    QString m_waitingDisplayName;
+    // Who is parked while talking to the other party.
+    QString m_heldPeer;
     QDateTime m_currentCallStart;
     bool m_currentCallIncoming = false;
     bool m_currentCallAnswered = false;

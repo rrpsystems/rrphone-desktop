@@ -266,6 +266,40 @@ share/Ortp/cmake/OrtpConfig.cmake
 share/BZRTP/cmake/BZRTPConfig.cmake
 ```
 
+### Chamada em espera (D-17)
+
+Duas chamadas podem coexistir: uma no ar (`m_activeCall`) e uma estacionada
+(`m_heldCall`). Uma terceira recebe 486 Busy — além disso deixaria de ser
+chamada em espera e viraria um telefone multi-linha, que é outro produto, e
+traria de volta os botões de linha que foram retirados da interface de
+propósito.
+
+Estados de UI: `CallWaiting` (conversando com um, o segundo tocando à espera de
+decisão) e `TwoCalls` (os dois atendidos, um estacionado). O botão secundário
+vira **Recusar** no primeiro e **Alternar** no segundo.
+
+O aviso é um bipe curto via `linphone_core_play_dtmf()`, não o toque. Tocar o
+toque inteiro por cima de uma conversa é intolerável, e o player de DTMF local
+é justamente o que toca só para este usuário — o outro lado não ouve nada.
+
+Três armadilhas que este código evita, todas encontradas em teste real:
+
+1. **Nunca reatribuir `m_activeCall` para a chamada nova.** Era o que o
+   tratamento anterior fazia: quando a segunda chamada era liberada, a
+   liberação parecia o fim da conversa e a UI voltava para "No gancho" com a
+   chamada real ainda no ar, áudio nos dois sentidos e sem meio de desligá-la.
+2. **Rótulos de progresso só valem para a chamada em primeiro plano**
+   (`emitForegroundLabel`). O motor reporta o estado de *todas* as chamadas, e
+   estacionar a segunda mandaria "Em espera" para a linha de gancho no meio da
+   frase com a outra pessoa.
+3. **Pausar antes de atender.** Aceitar a segunda sem pausar a primeira deixa
+   as duas no ar ao mesmo tempo e mistura os dois áudios.
+
+Quando a conversa termina com alguém ainda estacionado, a estacionada volta
+sozinha (`promoteHeldCall`). Se termina enquanto a segunda ainda toca, essa
+segunda passa a ser simplesmente uma chamada recebida — ir para repouso ali
+esconderia alguém que está ligando naquele instante.
+
 ### Transferência: um fluxo só
 
 O PRD separava transferência cega (D-07) e com consulta (D-06). Na prática
@@ -820,6 +854,7 @@ tools/        sip_register_test — utilitário de linha de comando pra testar
 | D-14 Codecs | `SipCoreManager::audioCodecs/setAudioCodecsOrder`, lista arrastável em `SettingsDialog` |
 | D-15 Método de DTMF | `SipCoreManager::setDtmfMethod`, combo em `SettingsDialog` |
 | D-16 Lista de contatos remota | `ContactsXmlFetcher`, `ContactsPanel` — mesclada com contatos locais (`LocalContactsStore`, `ContactEditDialog`) |
+| D-17 Chamada em espera | `SipCoreManager::answerWaitingCall/declineWaitingCall/swapCalls`, estados `CallWaiting`/`TwoCalls` em `MainWindow`. Acrescentado ao PRD depois dos testes de campo — ver "Chamada em espera" acima |
 
 ## Known gaps / TODO antes de considerar isto pronto para uso real
 

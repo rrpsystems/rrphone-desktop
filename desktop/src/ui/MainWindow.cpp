@@ -106,6 +106,10 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(m_sipCore, &SipCoreManager::callConnected, this, &MainWindow::onCallConnected);
     connect(m_sipCore, &SipCoreManager::remotePartyChanged, this, &MainWindow::onRemotePartyChanged);
     connect(m_sipCore, &SipCoreManager::callEnded, this, &MainWindow::onCallEnded);
+    connect(m_sipCore, &SipCoreManager::callWaiting, this, &MainWindow::onCallWaiting);
+    connect(m_sipCore, &SipCoreManager::waitingCallEnded, this, &MainWindow::onWaitingCallEnded);
+    connect(m_sipCore, &SipCoreManager::heldCallEnded, this, &MainWindow::onHeldCallEnded);
+    connect(m_sipCore, &SipCoreManager::heldCallPromoted, this, &MainWindow::onHeldCallPromoted);
     connect(m_sipCore, &SipCoreManager::callAutoHandled, this, &MainWindow::onCallAutoHandled);
     connect(m_sipCore, &SipCoreManager::consultationCallConnected, this, &MainWindow::onConsultationConnected);
     connect(m_sipCore, &SipCoreManager::errorOccurred, this, &MainWindow::onErrorOccurred);
@@ -636,7 +640,12 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 void MainWindow::applyUiCallState(UiCallState state) {
     m_uiCallState = state;
 
-    const bool inCall = (state == UiCallState::Active);
+    const bool waiting = (state == UiCallState::CallWaiting);
+    const bool twoCalls = (state == UiCallState::TwoCalls);
+    // A conversation is in progress in all three: plain Active, while a second
+    // call rings for a decision, and while one of two answered calls is parked.
+    // Mute, hold and transfer stay meaningful throughout.
+    const bool inCall = (state == UiCallState::Active || waiting || twoCalls);
     const bool incoming = (state == UiCallState::Incoming);
     const bool dialingTransfer = (state == UiCallState::TransferDialing);
     const bool consulting = (state == UiCallState::TransferConsulting);
@@ -695,10 +704,20 @@ void MainWindow::applyUiCallState(UiCallState state) {
         QStringLiteral("QPushButton { background-color: %1; color: white; font-weight: 600; }")
             .arg(Theme::kDangerRed);
 
-    m_secondaryButton->setVisible(incoming || dialingTransfer || consulting || dialingForward);
+    m_secondaryButton->setVisible(incoming || waiting || twoCalls || dialingTransfer || consulting ||
+                                   dialingForward);
     if (incoming) {
         m_secondaryButton->setText(tr("Recusar"));
         m_secondaryButton->setStyleSheet(dangerSecondary);
+    } else if (waiting) {
+        // Refuses only the newcomer; the conversation in progress is untouched.
+        m_secondaryButton->setText(tr("Recusar"));
+        m_secondaryButton->setToolTip(tr("Recusa a chamada em espera e mantém a atual"));
+        m_secondaryButton->setStyleSheet(dangerSecondary);
+    } else if (twoCalls) {
+        m_secondaryButton->setText(tr("Alternar"));
+        m_secondaryButton->setToolTip(tr("Troca qual das duas chamadas está no ar"));
+        m_secondaryButton->setStyleSheet(neutralSecondary);
     } else if (dialingTransfer || consulting) {
         m_secondaryButton->setText(tr("Cancelar"));
         m_secondaryButton->setToolTip(tr("Volta para a chamada original"));
@@ -711,6 +730,13 @@ void MainWindow::applyUiCallState(UiCallState state) {
 
     if (incoming) {
         m_actionButton->setText(tr("Atender"));
+        m_actionButton->setStyleSheet(actionStyle(Theme::kSuccessGreen, Theme::kSuccessGreenMuted));
+        m_actionButton->setEnabled(true);
+    } else if (waiting) {
+        // Green "Atender" for the second call: the current one is parked
+        // automatically, so this is the safe, expected action.
+        m_actionButton->setText(tr("Atender"));
+        m_actionButton->setToolTip(tr("Coloca a chamada atual em espera e atende a nova"));
         m_actionButton->setStyleSheet(actionStyle(Theme::kSuccessGreen, Theme::kSuccessGreenMuted));
         m_actionButton->setEnabled(true);
     } else if (inCall) {
@@ -757,6 +783,10 @@ void MainWindow::applyUiCallState(UiCallState state) {
         m_callSeconds = 0;
         m_callDurationLabel->clear();
     }
+
+    // The hook line carries "quem está aguardando"/"quem está em espera",
+    // which only this function knows has just changed.
+    refreshHookLabel();
 }
 
 void MainWindow::onRemotePartyChanged(const QString &displayName, const QString &number) {
@@ -804,6 +834,16 @@ void MainWindow::refreshHookLabel() {
 
     QStringList parts;
     parts << m_hookBaseText.toHtmlEscaped();
+    // Who else is on the line matters more than any mode badge, so it comes
+    // first: with two calls the user has to know which one they are talking to
+    // and who is parked.
+    if (m_uiCallState == UiCallState::CallWaiting && !m_waitingPeer.isEmpty()) {
+        parts << badge(tr("Aguardando: %1").arg(m_waitingDisplayName.isEmpty() ? m_waitingPeer
+                                                                                : m_waitingDisplayName),
+                       Theme::kAccentTeal);
+    } else if (m_uiCallState == UiCallState::TwoCalls && !m_heldPeer.isEmpty()) {
+        parts << badge(tr("%1 em espera").arg(m_heldPeer), Theme::kAccentTeal);
+    }
     if (m_muteButton->isChecked()) {
         parts << badge(tr("Mudo"), Theme::kDangerRed);
     }
@@ -1003,6 +1043,54 @@ void MainWindow::recordCallInHistory() {
     m_actionButton->setEnabled(!m_numberEdit->text().trimmed().isEmpty() || !lastDialedNumber().isEmpty());
 }
 
+void MainWindow::onCallWaiting(const QString &displayName, const QString &number) {
+    m_waitingPeer = number;
+    m_waitingDisplayName = displayName;
+
+    // A discreet double beep instead of the full ringtone: the user is in the
+    // middle of a conversation and the ring would talk over it. The local DTMF
+    // player is the right tool here — it is designed to be audible to this
+    // user only, so the person on the line hears nothing.
+    m_sipCore->playLocalDtmf('1');
+    QTimer::singleShot(220, this, [this]() {
+        if (m_uiCallState == UiCallState::CallWaiting) {
+            m_sipCore->playLocalDtmf('1');
+        }
+    });
+
+    applyUiCallState(UiCallState::CallWaiting);
+}
+
+void MainWindow::onWaitingCallEnded() {
+    // Caller gave up, or we declined: log it so the call isn't invisible, and
+    // go back to the conversation that never stopped.
+    if (!m_waitingPeer.isEmpty()) {
+        m_waitingPeer.clear();
+        m_waitingDisplayName.clear();
+    }
+    if (m_uiCallState == UiCallState::CallWaiting) {
+        applyUiCallState(m_sipCore->hasHeldCall() ? UiCallState::TwoCalls : UiCallState::Active);
+    }
+}
+
+void MainWindow::onHeldCallEnded() {
+    m_heldPeer.clear();
+    if (m_uiCallState == UiCallState::TwoCalls) {
+        setHookText(tr("O outro lado desligou"));
+        applyUiCallState(UiCallState::Active);
+    }
+}
+
+void MainWindow::onHeldCallPromoted() {
+    // The call we were on ended; the parked one is back in the foreground.
+    m_currentCallPeer = m_heldPeer;
+    m_currentCallConnectedPeer.clear();
+    m_heldPeer.clear();
+    m_callPeerLabel->setText(m_currentCallPeer);
+    setHookText(tr("Em chamada"));
+    applyUiCallState(UiCallState::Active);
+}
+
 void MainWindow::onCallAutoHandled(const QString &fromAddress, const QString &note) {
     // DND/forwarding never reach the normal call flow, so they are recorded
     // here — otherwise the user has no idea who called.
@@ -1055,8 +1143,29 @@ void MainWindow::onActionButtonClicked() {
         break;
 
     case UiCallState::Active:
+    case UiCallState::TwoCalls:
+        // Ends only the call in the foreground. With one parked, the engine
+        // brings it back and onHeldCallPromoted() puts the UI back in a call.
         m_sipCore->hangup();
         break;
+
+    case UiCallState::CallWaiting: {
+        // The conversation in progress is parked, not dropped.
+        m_heldPeer = m_currentCallConnectedPeer.isEmpty() ? m_currentCallPeer : m_currentCallConnectedPeer;
+        m_currentCallPeer = m_waitingPeer;
+        m_currentCallDisplayName = m_waitingDisplayName;
+        m_currentCallConnectedPeer.clear();
+        m_currentCallIncoming = true;
+        m_currentCallAnswered = true;
+        m_waitingPeer.clear();
+        m_waitingDisplayName.clear();
+
+        m_sipCore->answerWaitingCall();
+        m_callPeerLabel->setText(m_currentCallDisplayName.isEmpty() ? m_currentCallPeer
+                                                                     : m_currentCallDisplayName);
+        applyUiCallState(UiCallState::TwoCalls);
+        break;
+    }
 
     case UiCallState::Idle: {
         QString number = m_numberEdit->text().trimmed();
@@ -1126,6 +1235,24 @@ void MainWindow::onSecondaryButtonClicked() {
         setHookText(tr("No gancho"));
         applyUiCallState(UiCallState::Idle);
         break;
+
+    case UiCallState::CallWaiting:
+        // Only the newcomer is refused; the conversation carries on.
+        m_sipCore->declineWaitingCall();
+        break;
+
+    case UiCallState::TwoCalls: {
+        m_sipCore->swapCalls();
+        const QString wasInForeground =
+            m_currentCallConnectedPeer.isEmpty() ? m_currentCallPeer : m_currentCallConnectedPeer;
+        m_currentCallPeer = m_heldPeer;
+        m_currentCallConnectedPeer.clear();
+        m_currentCallDisplayName.clear();
+        m_heldPeer = wasInForeground;
+        m_callPeerLabel->setText(m_currentCallPeer);
+        refreshHookLabel();
+        break;
+    }
 
     case UiCallState::TransferDialing:
         // Gave up before dialing: just take the call off hold.

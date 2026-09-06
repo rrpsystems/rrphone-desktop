@@ -29,13 +29,13 @@ void SipCoreManager::shutdown() {
 
     if (m_core != nullptr) {
         // Say goodbye to whoever is on the line before dropping the core.
-        if (m_consultationCall) {
-            linphone_call_terminate(m_consultationCall);
-            m_consultationCall = nullptr;
-        }
-        if (m_activeCall) {
-            linphone_call_terminate(m_activeCall);
-            m_activeCall = nullptr;
+        // Every leg, not just the foreground one: a parked or ringing call
+        // left behind would keep a dialog open on the PBX after we're gone.
+        for (LinphoneCall **leg : {&m_consultationCall, &m_waitingCall, &m_heldCall, &m_activeCall}) {
+            if (*leg != nullptr) {
+                linphone_call_terminate(*leg);
+                *leg = nullptr;
+            }
         }
 
         if (m_coreReady) {
@@ -504,6 +504,71 @@ void SipCoreManager::setHeld(bool held) {
     }
 }
 
+// --- Call waiting -----------------------------------------------------------
+//
+// At most two calls exist at once: one in the foreground (m_activeCall) and
+// one parked (m_heldCall). A third would turn this into a multi-line phone,
+// which the UI deliberately isn't.
+
+void SipCoreManager::answerWaitingCall() {
+    if (!m_core || m_waitingCall == nullptr) {
+        return;
+    }
+    LinphoneCall *incoming = m_waitingCall;
+    m_waitingCall = nullptr;
+
+    // Park the current conversation first. Answering without pausing would
+    // leave both calls live at once and mix the two audio streams together.
+    if (m_activeCall != nullptr) {
+        linphone_call_pause(m_activeCall);
+        m_heldCall = m_activeCall;
+    }
+    m_activeCall = incoming;
+    m_lastRemoteParty.clear(); // the foreground party changed
+    linphone_call_accept(incoming);
+    qInfo().noquote() << "[sip] chamada em espera atendida; a anterior ficou em espera";
+    publishRemoteParty(m_activeCall);
+}
+
+void SipCoreManager::declineWaitingCall() {
+    if (!m_core || m_waitingCall == nullptr) {
+        return;
+    }
+    qInfo().noquote() << "[sip] chamada em espera recusada";
+    linphone_call_decline(m_waitingCall, LinphoneReasonBusy);
+    m_waitingCall = nullptr;
+    emit waitingCallEnded();
+}
+
+void SipCoreManager::swapCalls() {
+    if (!m_core || m_activeCall == nullptr || m_heldCall == nullptr) {
+        return;
+    }
+    LinphoneCall *goingToHold = m_activeCall;
+    LinphoneCall *comingBack = m_heldCall;
+
+    linphone_call_pause(goingToHold);
+    linphone_call_resume(comingBack);
+
+    m_activeCall = comingBack;
+    m_heldCall = goingToHold;
+    m_lastRemoteParty.clear();
+    qInfo().noquote() << "[sip] alternando entre as duas chamadas";
+    publishRemoteParty(m_activeCall);
+}
+
+// The foreground call ended while another was parked: bring the parked one
+// back instead of leaving the user with nothing.
+void SipCoreManager::promoteHeldCall() {
+    m_activeCall = m_heldCall;
+    m_heldCall = nullptr;
+    m_lastRemoteParty.clear();
+    linphone_call_resume(m_activeCall);
+    qInfo().noquote() << "[sip] chamada encerrada; retomando a que estava em espera";
+    emit heldCallPromoted();
+    publishRemoteParty(m_activeCall);
+}
+
 void SipCoreManager::sendDtmf(char digit) {
     // The audible feedback is local-only: DTMF is carried to the other side
     // out-of-band (RFC 2833 / SIP INFO), so without this the keypad is
@@ -952,6 +1017,17 @@ void SipCoreManager::handleRegistrationStateChanged(LinphoneProxyConfig *, Linph
     emit registrationStateChanged(registered, QString::fromUtf8(message ? message : ""));
 }
 
+// Progress labels describe the call the user is actually on. Emitting them for
+// every leg means the parked call's own transitions land on the hook line —
+// pausing it would announce "Em espera" while the user is mid-sentence with
+// the other party. The consultation leg during a transfer is likewise silent:
+// the UI writes its own text for that flow.
+void SipCoreManager::emitForegroundLabel(const LinphoneCall *call, const QString &label) {
+    if (call == m_activeCall) {
+        emit callStateChanged(label);
+    }
+}
+
 void SipCoreManager::handleCallStateChanged(LinphoneCall *call, LinphoneCallState state, const char *message) {
     // Every transition, not just the unhandled ones. A call that ends early leaves
     // no other trace, and without the full sequence there is no way to tell
@@ -1008,19 +1084,31 @@ void SipCoreManager::handleCallStateChanged(LinphoneCall *call, LinphoneCallStat
             break;
         }
 
-        // Single line (D-01): a second call arriving during a conversation is
-        // refused with 486 Busy, letting the PBX roll it to voicemail or the
-        // next extension in the group.
+        // Call waiting. A second call during a conversation is announced
+        // rather than answered or refused: the user decides.
         //
-        // Taking it over used to be silently destructive: m_activeCall was
-        // reassigned to the newcomer, so when *that* call was released the
-        // release looked like the end of the conversation and the UI dropped
-        // back to idle — while the real call was still up and carrying audio
-        // in both directions, with no way left to hang it up.
-        if (m_activeCall != nullptr || m_consultationCall != nullptr) {
-            qInfo().noquote() << "[sip] linha ocupada: recusando segunda chamada de" << callerId;
-            linphone_call_decline(call, LinphoneReasonBusy);
-            emit callAutoHandled(callerId, tr("recusada (linha ocupada)"));
+        // Never reassign m_activeCall here. Doing that used to be silently
+        // destructive — when the newcomer was released, the release looked
+        // like the end of the conversation and the UI dropped back to idle
+        // while the real call was still up and carrying audio, with no way
+        // left to hang it up.
+        //
+        // Two calls is the ceiling: past that it stops being call waiting and
+        // becomes a multi-line phone, which is a different product. A third
+        // caller gets 486 Busy so the PBX can roll it somewhere useful.
+        if (m_activeCall != nullptr) {
+            const bool canWait = m_consultationCall == nullptr && m_heldCall == nullptr &&
+                                  m_waitingCall == nullptr;
+            if (!canWait) {
+                qInfo().noquote() << "[sip] linha ocupada: recusando chamada de" << callerId;
+                linphone_call_decline(call, LinphoneReasonBusy);
+                emit callAutoHandled(callerId, tr("recusada (linha ocupada)"));
+                break;
+            }
+            m_waitingCall = call;
+            const char *waitingName = caller != nullptr ? linphone_address_get_display_name(caller) : nullptr;
+            qInfo().noquote() << "[sip] chamada em espera de" << callerId;
+            emit callWaiting(QString::fromUtf8(waitingName != nullptr ? waitingName : ""), callerId);
             break;
         }
 
@@ -1036,7 +1124,7 @@ void SipCoreManager::handleCallStateChanged(LinphoneCall *call, LinphoneCallStat
         } else if (call == m_consultationCall) {
             m_consultationAnswered = true;
         }
-        emit callStateChanged(tr("Em chamada"));
+        emitForegroundLabel(call, tr("Em chamada"));
         break;
     case LinphoneCallStreamsRunning:
         // Everything needed to explain "não sai áudio" in one line: what was
@@ -1063,37 +1151,67 @@ void SipCoreManager::handleCallStateChanged(LinphoneCall *call, LinphoneCallStat
             // somehow missed the Connected transition.
             emit callConnected();
         }
-        emit callStateChanged(tr("Em chamada"));
+        emitForegroundLabel(call, tr("Em chamada"));
         break;
     case LinphoneCallOutgoingInit:
     case LinphoneCallOutgoingProgress:
-        emit callStateChanged(tr("Chamando..."));
+        emitForegroundLabel(call, tr("Chamando..."));
         break;
     case LinphoneCallOutgoingRinging:
     case LinphoneCallOutgoingEarlyMedia:
-        emit callStateChanged(tr("Tocando..."));
+        emitForegroundLabel(call, tr("Tocando..."));
         break;
     case LinphoneCallResuming:
-        emit callStateChanged(tr("Retomando..."));
+        emitForegroundLabel(call, tr("Retomando..."));
         break;
     case LinphoneCallStateReferred:
-        emit callStateChanged(tr("Transferindo..."));
+        emitForegroundLabel(call, tr("Transferindo..."));
         break;
     case LinphoneCallPaused:
-        emit callStateChanged(tr("Em espera"));
+        emitForegroundLabel(call, tr("Em espera"));
         break;
     case LinphoneCallPausedByRemote:
-        emit callStateChanged(tr("Em espera pelo outro lado"));
+        emitForegroundLabel(call, tr("Em espera pelo outro lado"));
         break;
     case LinphoneCallError:
         emit errorOccurred(QString::fromUtf8(message ? message : "Erro na chamada"));
         [[fallthrough]];
     case LinphoneCallEnd:
     case LinphoneCallReleased:
+        if (call == m_waitingCall) {
+            // The second caller gave up before being answered.
+            m_waitingCall = nullptr;
+            emit waitingCallEnded();
+        }
+        if (call == m_heldCall) {
+            // The parked party hung up while we were talking to the other one.
+            m_heldCall = nullptr;
+            emit heldCallEnded();
+        }
         if (call == m_activeCall) {
             m_activeCall = nullptr;
             m_lastRemoteParty.clear(); // next call must report its own identity
-            emit callEnded();
+            if (m_heldCall != nullptr) {
+                // Don't drop the user out of the conversation entirely: bring
+                // the parked call back, which is what every desk phone does
+                // when you finish the call you had switched to.
+                promoteHeldCall();
+            } else if (m_waitingCall != nullptr) {
+                // The conversation ended while the second call was still
+                // ringing. It is now simply an incoming call — going idle here
+                // would hide someone who is calling right this moment.
+                m_activeCall = m_waitingCall;
+                m_waitingCall = nullptr;
+                emit waitingCallEnded(); // clears the "waiting" presentation
+                const LinphoneAddress *from = linphone_call_get_remote_address(m_activeCall);
+                const char *fromUser = from != nullptr ? linphone_address_get_username(from) : nullptr;
+                const char *fromName = from != nullptr ? linphone_address_get_display_name(from) : nullptr;
+                qInfo().noquote() << "[sip] chamada encerrada; a que aguardava vira a chamada recebida";
+                emit incomingCall(QString::fromUtf8(fromName != nullptr ? fromName : ""),
+                                   QString::fromUtf8(fromUser != nullptr ? fromUser : ""));
+            } else {
+                emit callEnded();
+            }
         }
         if (call == m_consultationCall) {
             m_consultationCall = nullptr;
