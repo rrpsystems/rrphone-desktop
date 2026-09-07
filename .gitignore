@@ -31,3 +31,9 @@ desktop/profile_key.txt
 desktop/dist/
 desktop/installer/Output/
 desktop/installer/version.iss
+
+# O app Android vive em repositório próprio: cada plataforma anda no seu ritmo,
+# e um bug ou feature de uma raramente corresponde à outra. Os arquivos ficam
+# aqui em disco só até serem movidos para lá — não devem entrar neste histórico,
+# que é do cliente desktop.
+android/
