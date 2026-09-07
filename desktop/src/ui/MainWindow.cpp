@@ -989,7 +989,7 @@ void MainWindow::showAbout() {
            "Ele vem <b>sem nenhuma garantia</b>, nem mesmo a garantia implícita de "
            "comercialização ou adequação a um fim específico.<br><br>"
            "Código-fonte e o procedimento de compilação:<br>"
-           "<a href=\"https://github.com/RRPSystems/RRPhone\">github.com/RRPSystems/RRPhone</a><br><br>"
+           "<a href=\"https://github.com/RRPSystems/rrphone-desktop\">github.com/RRPSystems/rrphone-desktop</a><br><br>"
            "Componentes de terceiros e suas licenças: "
            "<a href=\"file:///%4/THIRD-PARTY-NOTICES.md\">avisos de terceiros</a>.")
             .arg(QLatin1String(RRP_APP_NAME), QLatin1String(RRP_APP_VERSION),

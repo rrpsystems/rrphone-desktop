@@ -10,7 +10,7 @@ abaixo. Cada um permanece sob a sua própria licença.
 O código-fonte completo do RRP Softphone, incluindo o procedimento exato de
 compilação das bibliotecas que reconstruímos, está em:
 
-> https://github.com/RRPSystems/RRPhone
+> https://github.com/RRPSystems/rrphone-desktop
 
 Cada versão distribuída tem uma tag correspondente no repositório (`v1.0.2`,
 etc.). Para obter o fonte que gerou um instalador específico, use a tag de

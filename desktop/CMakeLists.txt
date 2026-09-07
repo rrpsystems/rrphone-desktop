@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(RRPSoftphone VERSION 1.0.2 LANGUAGES CXX)
+project(RRPSoftphone VERSION 1.0.3 LANGUAGES CXX)
 
 # Titular do copyright, num único lugar: entra nas propriedades do executável,
 # na tela "Sobre" e nos avisos de licença. Trocar a razão social é mudar aqui.
