@@ -1,7 +1,7 @@
 # RRP Softphone — Desktop (Windows)
 
 Esqueleto inicial do softphone desktop descrito em
-[`Docs/RRP_Softphone_Desktop_PRD_Lite_v1.0.md`](../Docs/RRP_Softphone_Desktop_PRD_Lite_v1.0.md).
+[`product-docs/RRP_Softphone_Desktop_PRD_Lite_v1.0.md`](../product-docs/RRP_Softphone_Desktop_PRD_Lite_v1.0.md).
 
 Engine SIP/RTP: **liblinphone** (mesma engine do app Android), via C++/Qt6.
 Não é um fork do MicroSip — ver Seção 2 do PRD para a justificativa.
@@ -853,6 +853,53 @@ de assinatura de código (OV ou EV) e acrescentar `SignTool` ao `[Setup]`.
 O `AppId` no `.iss` **não deve mudar entre versões**: é ele que faz o Windows
 reconhecer uma instalação existente e atualizá-la. Trocá-lo instala a nova
 versão ao lado da antiga.
+
+### Publicando uma release (download hospedado no GitHub, sem custo)
+
+O instalador é distribuído como *asset* de uma [GitHub
+Release](https://github.com/RRPSystems/rrphone-desktop/releases) — download
+direto, sem hospedagem própria e sem limite de banda para uso normal. A página
+estática em [`docs/index.html`](../docs/index.html) (servida via GitHub Pages)
+aponta para lá.
+
+O nome do arquivo muda a cada versão
+(`RRPSoftphone-1.0.3-setup.exe`), então o link de download da página não pode
+apontar para um nome fixo direto — a não ser que cada release publique **dois**
+arquivos idênticos: o nomeado com a versão (o registro permanente, exigido
+pela GPL como o binário correspondente àquela tag) e uma cópia com nome fixo
+`RRPSoftphone-setup.exe`. O botão de download da página aponta para
+
+```
+https://github.com/RRPSystems/rrphone-desktop/releases/latest/download/RRPSoftphone-setup.exe
+```
+
+que é um redirecionamento permanente do GitHub para esse nome de arquivo **na
+release mais recente** — sempre correto, sem editar a página a cada versão, e
+funciona mesmo com JavaScript desabilitado (o `docs/index.html` só usa JS para
+mostrar o número da versão/tamanho abaixo do botão; se falhar, o link estático
+já embutido no HTML continua funcionando).
+
+Passo a passo de uma release:
+
+```bash
+git tag -a v1.0.3 -m "RRP Softphone 1.0.3 — fonte correspondente ao instalador RRPSoftphone-1.0.3-setup.exe"
+git push origin main --tags
+```
+
+```bash
+cp installer/Output/RRPSoftphone-1.0.3-setup.exe installer/Output/RRPSoftphone-setup.exe
+```
+
+```bash
+gh release create v1.0.3 \
+  installer/Output/RRPSoftphone-1.0.3-setup.exe \
+  installer/Output/RRPSoftphone-setup.exe \
+  --title "RRP Softphone 1.0.3" \
+  --notes "Ver histórico de commits desde a tag anterior."
+```
+
+**A tag é o que a GPL chama de *Corresponding Source*** do binário publicado —
+nunca apague uma tag de uma versão que já foi distribuída.
 
 ## Rodando para testar
 

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RRP Softphone — Download</title>
+<meta name="description" content="RRP Softphone: softphone SIP para Windows, leve e direto ao ponto. Transferência com consulta, chamada em espera, G.729 e código aberto.">
+<link rel="icon" href="assets/favicon.ico">
+<style>
+  :root {
+    --bg: #14181D;
+    --panel: #1C2128;
+    --button: #232A33;
+    --border: #2B333D;
+    --text-primary: #E8ECEF;
+    --text-secondary: #8B96A3;
+    --teal: #2C9E82;
+    --blue: #2E9FDB;
+    --success: #2E9C4C;
+    --success-hover: #279143;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+  }
+  a { color: var(--blue); }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px; }
+
+  header.hero {
+    text-align: center;
+    padding: 72px 24px 48px;
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(44,158,130,0.18), transparent 60%),
+      var(--bg);
+  }
+  header.hero img { width: 108px; height: 108px; display: block; margin: 0 auto 20px; }
+  header.hero h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.01em; }
+  header.hero p.tagline { color: var(--text-secondary); font-size: 17px; margin: 0 0 36px; }
+
+  .download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--success);
+    color: #fff;
+    font-weight: 600;
+    font-size: 17px;
+    text-decoration: none;
+    padding: 16px 32px;
+    border-radius: 10px;
+    transition: background 0.15s ease;
+  }
+  .download-btn:hover { background: var(--success-hover); }
+  .download-btn svg { width: 20px; height: 20px; flex: none; }
+
+  .download-meta {
+    margin-top: 14px;
+    color: var(--text-secondary);
+    font-size: 13.5px;
+  }
+  .download-meta a { color: var(--text-secondary); text-decoration: underline; }
+
+  .requirements {
+    margin-top: 28px;
+    font-size: 13.5px;
+    color: var(--text-secondary);
+  }
+
+  section { padding: 40px 0; border-top: 1px solid var(--border); }
+  section h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin: 0 0 20px;
+  }
+
+  .features {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px 28px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .features li { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; }
+  .features li::before {
+    content: "";
+    flex: none;
+    width: 8px; height: 8px;
+    margin-top: 7px;
+    border-radius: 2px;
+    background: var(--teal);
+  }
+  @media (max-width: 560px) { .features { grid-template-columns: 1fr; } }
+
+  .smartscreen {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  .smartscreen strong { color: var(--text-primary); }
+
+  .oss-box {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    font-size: 14px;
+  }
+  .oss-box .links { display: flex; gap: 18px; flex-wrap: wrap; }
+
+  footer {
+    padding: 32px 24px 48px;
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--text-secondary); }
+  footer .brand { color: var(--text-primary); font-weight: 600; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <img src="assets/rrp_logo.png" alt="RRP Systems" width="108" height="108">
+    <h1>RRP Softphone</h1>
+    <p class="tagline">Softphone SIP para Windows. Leve, direto ao ponto, código aberto.</p>
+
+    <a class="download-btn" id="download-btn"
+       href="https://github.com/RRPSystems/rrphone-desktop/releases/latest/download/RRPSoftphone-setup.exe">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      <span>Baixar para Windows</span>
+    </a>
+
+    <div class="download-meta" id="download-meta">
+      Windows 10/11 · 64-bit ·
+      <a href="https://github.com/RRPSystems/rrphone-desktop/releases">ver todas as versões</a>
+    </div>
+
+    <div class="requirements">
+      O instalador cuida do runtime necessário automaticamente.
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Recursos</h2>
+    <ul class="features">
+      <li>Transferência com consulta, num fluxo só</li>
+      <li>Chamada em espera (atender, recusar, alternar)</li>
+      <li>G.729 e G.711, sem custo de transcodificação no PBX</li>
+      <li>Não perturbe e encaminhamento incondicional (siga-me)</li>
+      <li>Microfone, alto-falante e toque roteados separadamente</li>
+      <li>Histórico local e agenda via XML remoto (formato MicroSip)</li>
+      <li>Provisionamento por arquivo, criptografado (AES-256-GCM)</li>
+      <li>Cancelamento de eco e supressão de ruído opcionais</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Instalação</h2>
+    <div class="smartscreen">
+      O instalador ainda não é assinado digitalmente, então o Windows pode
+      mostrar <strong>"O Windows protegeu o computador"</strong> ao abri-lo.
+      Isso é esperado: clique em <strong>Mais informações</strong> e depois em
+      <strong>Executar assim mesmo</strong>.
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Código aberto</h2>
+    <div class="oss-box">
+      <span>Distribuído sob a <strong>GNU GPL v3</strong>.</span>
+      <span class="links">
+        <a href="https://github.com/RRPSystems/rrphone-desktop">Código-fonte</a>
+        <a href="https://github.com/RRPSystems/rrphone-desktop/blob/main/LICENSE">Licença</a>
+        <a href="https://github.com/RRPSystems/rrphone-desktop/blob/main/desktop/licenses/THIRD-PARTY-NOTICES.md">Avisos de terceiros</a>
+      </span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="brand">RRP Systems Ltda.</div>
+  <div>CNPJ 39.539.153/0001-47 · <a href="mailto:contato@rrpsystems.com.br">contato@rrpsystems.com.br</a></div>
+  <div style="margin-top:8px;">© 2026 RRP Systems Ltda. — RRP Softphone é software livre, sem garantia.</div>
+</footer>
+
+<script>
+// The download button above already works with zero JavaScript: it points at
+// GitHub's "latest release" redirect for a fixed asset name
+// (RRPSoftphone-setup.exe), which every release re-publishes alongside the
+// version-numbered file. This script only enhances the small text under the
+// button with the live version/size — if it fails (offline, API rate limit,
+// script blocked), the static text already in the HTML stays as-is and the
+// button keeps working regardless.
+(async () => {
+  const metaEl = document.getElementById('download-meta');
+  try {
+    const res = await fetch('https://api.github.com/repos/RRPSystems/rrphone-desktop/releases/latest', {
+      headers: { Accept: 'application/vnd.github+json' }
+    });
+    if (!res.ok) return;
+    const release = await res.json();
+    const asset = (release.assets || []).find(a => /-setup\.exe$/i.test(a.name));
+    if (!asset) return;
+    const mb = asset.size ? (asset.size / (1024 * 1024)).toFixed(1) : null;
+    const version = (release.tag_name || '').replace(/^v/i, '');
+    const parts = [];
+    if (version) parts.push('versão ' + version);
+    parts.push('Windows 10/11 · 64-bit');
+    if (mb) parts.push(mb + ' MB');
+    metaEl.innerHTML = parts.join(' · ') +
+      ' · <a href="https://github.com/RRPSystems/rrphone-desktop/releases">ver todas as versões</a>';
+  } catch (e) {
+    // Silent on purpose: the static fallback already shown is correct enough,
+    // and surfacing a network error here would only alarm the user over a
+    // page that already works.
+  }
+})();
+</script>
+
+</body>
+</html>
