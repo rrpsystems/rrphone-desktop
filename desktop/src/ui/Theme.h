@@ -5,7 +5,7 @@
 // Dark theme derived from the RRP Systems logo (teal square + blue orbit),
 // applied app-wide so the softphone reads as one coherent, branded window
 // instead of default-grey Qt widgets — loosely modeled after the compact,
-// dark softphone look (3CXPhone/MicroSip) the PRD asks for.
+// dark softphone look the PRD asks for.
 namespace Theme {
 constexpr auto kBackground = "#14181D";
 constexpr auto kPanel = "#1C2128";

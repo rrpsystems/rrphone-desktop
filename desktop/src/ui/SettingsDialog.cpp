@@ -191,7 +191,7 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
 
     auto *contactsForm = new QFormLayout();
     contactsForm->addRow(tr("URL da lista de contatos"), m_contactsUrlEdit);
-    contactsForm->addRow(new QLabel(tr("Formato MicroSip (<contacts>/<contact>). Deixe em branco para não usar.")));
+    contactsForm->addRow(new QLabel(tr("Formato <contacts>/<contact>. Deixe em branco para não usar.")));
     contactsForm->addRow(m_replaceLocalContactsCheck);
     auto *contactsTab = new QWidget(this);
     contactsTab->setLayout(contactsForm);

@@ -9,16 +9,16 @@
 
 O PRD v3.1 descrevia um produto multiplataforma completo (Android/iOS/Windows/Linux + módulo Call Center + vídeo + mensageria). O desenvolvimento do app Android já foi iniciado nessa linha. As prioridades do negócio mudaram: a necessidade imediata é um **softphone desktop Windows básico**, sem os módulos avançados (call center, vídeo, mensageria, multi-dispositivo via SIP CANCEL) que o PRD antigo amarrava ao MVP.
 
-Referência de produto: **3CXPhone (modelo antigo) / MicroSip** — janela compacta, teclado numérico, hold/transfer, sem frescura. As imagens de referência trocadas na definição deste escopo ilustram apenas o **nível de simplicidade visual** pretendido — não são um layout a ser seguido à risca.
+Referência de produto: **softphone de mesa clássico** — janela compacta, teclado numérico, hold/transfer, sem frescura. As imagens de referência trocadas na definição deste escopo ilustram apenas o **nível de simplicidade visual** pretendido — não são um layout a ser seguido à risca.
 
 Este documento cobre **somente o desktop Windows**. O app Android segue seu próprio ritmo e, futuramente, o backend Flexisip/push será compartilhado entre as duas frentes.
 
 ## 2. Decisão Arquitetural — Engine Única (liblinphone)
 
-- **Engine SIP/RTP: liblinphone**, a mesma usada no app Android — não PJSIP/MicroSip fork.
+- **Engine SIP/RTP: liblinphone**, a mesma usada no app Android — não um fork de softphone baseado em PJSIP.
   - Motivo: um único motor para manter (NAT traversal, codecs, SRTP, lógica de transferência) entre mobile e desktop; integração futura natural com Flexisip (registro/push) sem duplicar comportamento.
-- **Não é fork do MicroSip.** MicroSip roda sobre PJSUA2/PJSIP — adotá-lo criaria dois motores SIP divergentes no produto.
-- **Ponto de partida técnico:** usar o app de referência oficial `linphone-desktop` (Qt/QML + liblinphone, código aberto da Belledonne) como esqueleto de integração, **podado** para o subconjunto de telas/funcionalidades deste documento e re-skinado para o visual compacto estilo 3CXPhone/MicroSip. Isso evita reescrever do zero a parte de binding C++↔liblinphone (registro, estados de chamada, transferência), que já existe e é testada no projeto oficial.
+- **Não é fork de um softphone existente.** As alternativas avaliadas rodam sobre PJSUA2/PJSIP — adotá-las criaria dois motores SIP divergentes no produto.
+- **Ponto de partida técnico:** usar o app de referência oficial `linphone-desktop` (Qt/QML + liblinphone, código aberto da Belledonne) como esqueleto de integração, **podado** para o subconjunto de telas/funcionalidades deste documento e re-skinado para o visual compacto de softphone de mesa. Isso evita reescrever do zero a parte de binding C++↔liblinphone (registro, estados de chamada, transferência), que já existe e é testada no projeto oficial.
 - Stack: Qt 6.x + C++ (ou Qt/QML conforme o esqueleto herdado) + liblinphone via CMake, distribuído como instalador MSI assinado — consistente com a Seção 4.1 do PRD v3.1.
 
 ## 3. Objetivo
@@ -43,9 +43,9 @@ Um softphone desktop Windows simples, estável, com **transferência de chamada 
 | D-13 | **Provisionamento por arquivo** | Could (bem-vindo, não obrigatório) | Ver Seção 5 |
 | D-14 | Configuração básica de codecs | Must | Habilitar/desabilitar e ordenar prioridade (OPUS, G.711 A/U-law, G.722, GSM etc.) — nativo do liblinphone, só precisa de tela de config |
 | D-15 | Método de DTMF configurável | Should | RFC2833 (out-of-band) / SIP INFO / in-band — nativo do liblinphone |
-| D-16 | Lista de contatos remota via URL (XML) | Must | App baixa um XML de uma URL configurável e popula a agenda local — formato herdado do MicroSip (Seção 8). **Não é um recurso do liblinphone**: é lógica de app (HTTP GET + parse), independente do SDK. |
+| D-16 | Lista de contatos remota via URL (XML) | Must | App baixa um XML de uma URL configurável e popula a agenda local — schema `<contacts>/<contact>` (Seção 8). **Não é um recurso do liblinphone**: é lógica de app (HTTP GET + parse), independente do SDK. |
 
-**Nota sobre D-09 (múltiplas linhas):** removido do MVP por decisão do produto — conta única, estilo MicroSip. A transferência com consulta (D-06) **não depende** de múltiplas linhas/contas: liblinphone suporta nativamente duas chamadas simultâneas na mesma conta registrada (uma em espera, outra de consulta), então múltiplas linhas fica como possível evolução de UI, não como pré-requisito técnico do D-06.
+**Nota sobre D-09 (múltiplas linhas):** removido do MVP por decisão do produto — conta única. A transferência com consulta (D-06) **não depende** de múltiplas linhas/contas: liblinphone suporta nativamente duas chamadas simultâneas na mesma conta registrada (uma em espera, outra de consulta), então múltiplas linhas fica como possível evolução de UI, não como pré-requisito técnico do D-06.
 
 ### D-17 — Chamada em espera (acrescentado após os testes de campo)
 
@@ -117,13 +117,13 @@ Proposta:
 
 ## 8. Decisões Registradas
 
-- **D-09 (múltiplas linhas): fora do MVP.** Conta única, estilo MicroSip. Confirmado que a transferência com consulta (D-06) não exige múltiplas linhas — fica como possível evolução de v1.1, não como bloqueador.
+- **D-09 (múltiplas linhas): fora do MVP.** Conta única. Confirmado que a transferência com consulta (D-06) não exige múltiplas linhas — fica como possível evolução de v1.1, não como bloqueador.
 - **Code signing do instalador: fora do MVP.** Primeira fase distribuída internamente sem assinatura; assinatura de código entra quando o app for validado e for para distribuição mais ampla.
 - **Integração com backend RRP: nenhuma nesta fase.** Configuração 100% local (conta SIP manual ou via arquivo, Seção 5). A única integração externa prevista é o **download da lista de contatos remota (D-16)**, que é um HTTP GET simples para uma URL configurável — não depende de backend próprio da RRP, qualquer servidor pode hospedar o XML.
 
-### D-16 — Schema do XML da Lista de Contatos (decidido: formato MicroSip)
+### D-16 — Schema do XML da Lista de Contatos
 
-Reaproveitado o formato já consolidado do MicroSip (compatível com o que clientes/telefonia já podem ter em uso). Exemplo de referência: `https://www.microsip.org/contacts-sample.xml`.
+Adotado um schema `<contacts>/<contact>` já consolidado no mercado, compatível com o que clientes/telefonia podem já ter em uso — a intenção é que um XML existente funcione sem conversão.
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -139,7 +139,7 @@ Notas de implementação:
 - `contact/@number`: número/ramal principal — o usado para discar com um clique/duplo clique no contato.
 - `contact/@phone`, `@mobile`: números alternativos, exibidos como campos secundários (não usados para discagem padrão).
 - `contact/@presence`: `"1"`/`"0"` — reservado para indicar presença/status do contato; **não implementado no MVP** (não há canal de presença nesta fase — Seção "Fora de Escopo"), o campo é apenas lido/ignorado por enquanto para manter compatibilidade com arquivos existentes.
-- `contact/@info`: texto livre (no exemplo do MicroSip é usado para "empresa/setor") — exibido como informação secundária/tooltip.
+- `contact/@info`: texto livre (tipicamente usado para "empresa/setor") — exibido como informação secundária/tooltip.
 - `firstname`, `lastname`, `email`, `address`, `city`, `state`, `zip`, `comment`: aceitos e armazenados, mas sem exibição obrigatória na UI do MVP (podem ficar disponíveis num "detalhe do contato" simples).
 - Parsing tolerante: atributos ausentes tratados como string vazia, sem quebrar o import.
 - **D-16 pode ser desenvolvido em paralelo** ao core de chamadas — é uma tela de agenda + fetch HTTP + parser XML, sem dependência do liblinphone.

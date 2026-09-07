@@ -4,7 +4,7 @@ Esqueleto inicial do softphone desktop descrito em
 [`product-docs/RRP_Softphone_Desktop_PRD_Lite_v1.0.md`](../product-docs/RRP_Softphone_Desktop_PRD_Lite_v1.0.md).
 
 Engine SIP/RTP: **liblinphone** (mesma engine do app Android), via C++/Qt6.
-Não é um fork do MicroSip — ver Seção 2 do PRD para a justificativa.
+Não é um fork de softphone existente — ver Seção 2 do PRD para a justificativa.
 
 ## Licenciamento
 
@@ -941,7 +941,7 @@ src/
   core/       SipCoreManager — wrapper Qt em cima do LinphoneCore (registro,
               chamada, hold/mute/DTMF, transferência, codecs)
   contacts/   ContactsXmlFetcher — download + parse do XML de contatos (D-16,
-              formato MicroSip). Não depende de liblinphone.
+              elementos `<contacts>/<contact>`). Não depende de liblinphone.
   profile/    ProfileStore — import/export do arquivo .rrpprofile (D-13);
               SettingsStore — persistência entre execuções (QSettings);
               CredentialStore — senha SIP no Windows Credential Manager

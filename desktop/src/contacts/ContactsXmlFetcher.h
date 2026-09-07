@@ -10,7 +10,7 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 
-// D-16 — downloads and parses a MicroSip-format contacts XML from a
+// D-16 — downloads and parses a <contacts>/<contact> XML phonebook from a
 // configurable URL:
 //
 //   <?xml version="1.0" encoding="UTF-8"?>

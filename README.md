@@ -1,8 +1,8 @@
 # RRP Softphone — Desktop
 
-Softphone SIP para Windows, no espírito do MicroSip/3CXPhone antigo:
-compacto, direto ao ponto, com transferência com consulta como requisito
-obrigatório. Engine SIP/RTP: [liblinphone](https://www.linphone.org/).
+Softphone SIP para Windows: janela compacta, teclado numérico, sem frescura —
+com transferência com consulta como requisito obrigatório.
+Engine SIP/RTP: [liblinphone](https://www.linphone.org/).
 
 **[Baixar para Windows](https://rrpsystems.github.io/rrphone-desktop/)**
 

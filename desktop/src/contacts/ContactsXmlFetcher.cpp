@@ -46,7 +46,7 @@ void ContactsXmlFetcher::scheduleAutoRefresh(int minutes) {
     if (minutes > 0) {
         m_autoRefreshTimer.start(minutes * 60 * 1000);
     }
-    // minutes <= 0: no auto refresh, matches MicroSip's refresh="0" semantics.
+    // minutes <= 0: no auto refresh, which is what refresh="0" means in the schema.
 }
 
 QList<Contact> ContactsXmlFetcher::parseXml(const QByteArray &xmlData, int *refreshMinutesOut) {

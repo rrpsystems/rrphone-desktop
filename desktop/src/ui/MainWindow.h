@@ -26,7 +26,7 @@ class HistoryPanel;
 class SettingsDialog;
 
 // Single-window softphone UI, laid out like the compact desk-phone softphones
-// the PRD references (3CXPhone/MicroSip): status row, display area, hook line
+// the PRD references: status row, display area, hook line
 // with call actions, line tabs, keypad, one big action button, and an icon
 // nav bar at the bottom. Everything lives in one window — no menu bar, no
 // side dock — so it stays as close to that reference layout as possible.
