@@ -8,9 +8,10 @@ redirecionamento permanente do GitHub
 
     /releases/latest/download/RRPSoftphone-setup.exe
 
-que sempre resolve para a release mais recente, desde que cada release publique
-um asset com esse nome fixo além do arquivo nomeado com a versão. O
-procedimento completo está em
+que sempre resolve para a release mais recente, porque o asset publicado tem
+sempre esse nome fixo — sem a versão, que já está na tag, nas propriedades do
+`.exe` e na tela Sobre. Publicar é um comando só
+(`.\installer\publish-release.ps1`); o procedimento está em
 [`../desktop/README.md`](../desktop/README.md#publicando-uma-release-download-hospedado-no-github-sem-custo).
 
 ## Habilitando o GitHub Pages

@@ -859,44 +859,39 @@ versão ao lado da antiga.
 O instalador é distribuído como *asset* de uma [GitHub
 Release](https://github.com/RRPSystems/rrphone-desktop/releases) — download
 direto, sem hospedagem própria e sem limite de banda para uso normal. A página
-estática em [`docs/index.html`](../docs/index.html) (servida via GitHub Pages)
+estática em [`docs/index.html`](../docs/index.html), servida via GitHub Pages,
 aponta para lá.
 
-O nome do arquivo muda a cada versão
-(`RRPSoftphone-1.0.3-setup.exe`), então o link de download da página não pode
-apontar para um nome fixo direto — a não ser que cada release publique **dois**
-arquivos idênticos: o nomeado com a versão (o registro permanente, exigido
-pela GPL como o binário correspondente àquela tag) e uma cópia com nome fixo
-`RRPSoftphone-setup.exe`. O botão de download da página aponta para
+Um comando publica tudo:
+
+```powershell
+.\installer\publish-release.ps1
+```
+
+O script lê a versão do `CMakeLists.txt` (a mesma fonte que alimenta o
+instalador e as propriedades do executável), recusa publicar se o `.exe`
+compilado não for daquela versão — o erro mais provável aqui é bumpar a versão
+e esquecer de refazer o build —, cria e envia a tag, e publica o release.
+
+**O asset publicado tem nome fixo, sem a versão: `RRPSoftphone-setup.exe`.**
+É isso que faz o botão da página funcionar para sempre sem manutenção, porque
 
 ```
 https://github.com/RRPSystems/rrphone-desktop/releases/latest/download/RRPSoftphone-setup.exe
 ```
 
-que é um redirecionamento permanente do GitHub para esse nome de arquivo **na
-release mais recente** — sempre correto, sem editar a página a cada versão, e
-funciona mesmo com JavaScript desabilitado (o `docs/index.html` só usa JS para
-mostrar o número da versão/tamanho abaixo do botão; se falhar, o link estático
-já embutido no HTML continua funcionando).
+é um redirecionamento permanente do GitHub para esse nome na release mais
+recente. Como o link é estático, ele funciona mesmo com JavaScript desabilitado
+— o `docs/index.html` só usa JS para mostrar versão e tamanho abaixo do botão,
+e se essa chamada falhar o texto estático já embutido permanece.
 
-Passo a passo de uma release:
-
-```bash
-git tag -a v1.0.3 -m "RRP Softphone 1.0.3 — fonte correspondente ao instalador RRPSoftphone-1.0.3-setup.exe"
-git push origin main --tags
-```
-
-```bash
-cp installer/Output/RRPSoftphone-1.0.3-setup.exe installer/Output/RRPSoftphone-setup.exe
-```
-
-```bash
-gh release create v1.0.3 \
-  installer/Output/RRPSoftphone-1.0.3-setup.exe \
-  installer/Output/RRPSoftphone-setup.exe \
-  --title "RRP Softphone 1.0.3" \
-  --notes "Ver histórico de commits desde a tag anterior."
-```
+Colocar a versão no nome do arquivo obrigaria a publicar o mesmo binário duas
+vezes (o versionado e uma cópia de nome fixo), 122 MB por release para nada. E
+é desnecessário: a versão já está registrada em três lugares mais confiáveis
+que um nome de arquivo — a tag, as propriedades do `.exe`
+(Detalhes → Versão do arquivo) e a tela Sobre do aplicativo. O arquivo
+versionado continua sendo gerado em `installer\Output\` como histórico local de
+builds; ele apenas não vai para o release.
 
 **A tag é o que a GPL chama de *Corresponding Source*** do binário publicado —
 nunca apague uma tag de uma versão que já foi distribuída.
