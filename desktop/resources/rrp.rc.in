@@ -27,13 +27,14 @@ BEGIN
         // 0416 = português do Brasil, 04b0 = Unicode.
         BLOCK "041604b0"
         BEGIN
-            VALUE "CompanyName",      "RRP Systems"
+            VALUE "CompanyName",      "@RRP_COPYRIGHT_HOLDER@"
             VALUE "FileDescription",  "RRP Softphone"
             VALUE "FileVersion",      "@PROJECT_VERSION@"
             VALUE "InternalName",     "RRPSoftphone"
             VALUE "OriginalFilename", "RRPSoftphone.exe"
             VALUE "ProductName",      "RRP Softphone"
             VALUE "ProductVersion",   "@PROJECT_VERSION@"
+            VALUE "LegalCopyright",   "Copyright (C) 2026 @RRP_COPYRIGHT_HOLDER@ - GNU GPL v3"
         END
     END
     BLOCK "VarFileInfo"

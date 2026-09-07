@@ -67,6 +67,9 @@ private slots:
     void onForwardButtonClicked();
 
     void onSettingsRequested();
+    // Versão, copyright, licença e onde está o fonte — a via pela qual quem
+    // recebeu só o binário toma ciência dos direitos que a GPL lhe dá.
+    void showAbout();
     // Applies a profile to the running engine (no persistence).
     void applyProfile(const AccountProfile &profile);
     // Applies *and* persists — this is what the settings dialog triggers.

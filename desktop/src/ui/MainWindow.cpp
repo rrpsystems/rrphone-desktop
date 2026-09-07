@@ -563,6 +563,9 @@ void MainWindow::setupTrayIcon() {
         activateWindow();
     });
     trayMenu->addSeparator();
+    auto *aboutAction = trayMenu->addAction(tr("Sobre"));
+    connect(aboutAction, &QAction::triggered, this, &MainWindow::showAbout);
+    trayMenu->addSeparator();
     auto *quitAction = trayMenu->addAction(tr("Sair"));
     connect(quitAction, &QAction::triggered, qApp, &QCoreApplication::quit);
 
@@ -969,6 +972,39 @@ void MainWindow::onIncomingCall(const QString &displayName, const QString &addre
     setHookText(tr("Chamada recebida"));
     applyUiCallState(UiCallState::Incoming);
     announceIncomingCall(who);
+}
+
+// The GPL requires that whoever receives the binary be told their rights and
+// where the source is. A user who got only the installer never opens the
+// repository, so the notice has to be reachable from inside the app — this is
+// that place, and it is also where support reads the version from.
+void MainWindow::showAbout() {
+    const QString licensesDir = QDir(QCoreApplication::applicationDirPath() + "/licenses").absolutePath();
+    const QString text =
+        tr("<b>%1</b> versão %2<br>"
+           "Copyright © 2026 %3<br><br>"
+           "Este programa é <b>software livre</b>, distribuído sob a "
+           "<a href=\"file:///%4/gpl-3.0.txt\">GNU General Public License v3</a>. "
+           "Você pode redistribuí-lo e modificá-lo sob os termos dessa licença.<br><br>"
+           "Ele vem <b>sem nenhuma garantia</b>, nem mesmo a garantia implícita de "
+           "comercialização ou adequação a um fim específico.<br><br>"
+           "Código-fonte e o procedimento de compilação:<br>"
+           "<a href=\"https://github.com/RRPSystems/RRPhone\">github.com/RRPSystems/RRPhone</a><br><br>"
+           "Componentes de terceiros e suas licenças: "
+           "<a href=\"file:///%4/THIRD-PARTY-NOTICES.md\">avisos de terceiros</a>.")
+            .arg(QLatin1String(RRP_APP_NAME), QLatin1String(RRP_APP_VERSION),
+                  QLatin1String(RRP_COPYRIGHT_HOLDER), licensesDir);
+
+    QMessageBox about(this);
+    about.setWindowTitle(tr("Sobre o %1").arg(QLatin1String(RRP_APP_NAME)));
+    about.setIconPixmap(QPixmap(":/rrp_logo.png").scaled(64, 64, Qt::KeepAspectRatio,
+                                                          Qt::SmoothTransformation));
+    about.setTextFormat(Qt::RichText);
+    about.setText(text);
+    // Opens the license files and the repository in the user's own browser or
+    // editor, instead of leaving the links as decoration.
+    about.setTextInteractionFlags(Qt::TextBrowserInteraction);
+    about.exec();
 }
 
 // How a ringing call asks for attention. Windows refuses to let a background

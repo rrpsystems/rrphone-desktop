@@ -1,11 +1,24 @@
 cmake_minimum_required(VERSION 3.21)
 project(RRPSoftphone VERSION 1.0.2 LANGUAGES CXX)
 
+# Titular do copyright, num único lugar: entra nas propriedades do executável,
+# na tela "Sobre" e nos avisos de licença. Trocar a razão social é mudar aqui.
+# Deliberadamente NÃO é uma entrada de cache. Com CACHE, um valor já gravado
+# vence o default daqui em silêncio: editar esta linha não teria efeito nenhum
+# numa pasta de build existente, e o binário sairia com o titular errado sem
+# nada indicando o motivo — foi exatamente o que aconteceu ao trocar o nome
+# comercial pela razão social. Passar -DRRP_COPYRIGHT_HOLDER=... na linha de
+# comando continua funcionando.
+if(NOT DEFINED RRP_COPYRIGHT_HOLDER)
+    set(RRP_COPYRIGHT_HOLDER "RRP Systems Ltda.")
+endif()
+
 # Identifies the app to the SIP server (User-Agent header) and in the About
 # information. Bump the project() version above to change it.
 add_compile_definitions(
     RRP_APP_NAME="RRP Softphone"
     RRP_APP_VERSION="${PROJECT_VERSION}"
+    RRP_COPYRIGHT_HOLDER="${RRP_COPYRIGHT_HOLDER}"
 )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -262,6 +275,14 @@ if(LINPHONESDK_DIR AND EXISTS "${LINPHONESDK_DIR}/share")
     endforeach()
 endif()
 
+# As licenças também ficam ao lado do .exe em desenvolvimento, senão os links
+# da tela "Sobre" apontam para o vazio em toda execução que não seja instalada.
+add_custom_command(TARGET RRPSoftphone POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/licenses"
+        "$<TARGET_FILE_DIR:RRPSoftphone>/licenses"
+)
+
 # Our own ringtone. liblinphone plays the ring from a real file path, so it
 # cannot come from the Qt resource bundle like the icons do — it has to sit on
 # disk next to the executable.
@@ -335,6 +356,10 @@ install(CODE "
     file(GLOB _rrp_runtime_dlls \"${CMAKE_CURRENT_BINARY_DIR}/*.dll\")
     file(INSTALL \${_rrp_runtime_dlls} DESTINATION \"\${CMAKE_INSTALL_PREFIX}\")
 ")
+
+# Textos de licença e avisos de terceiros: acompanham o binário porque a GPL
+# obriga a informar quem o recebe, e a tela "Sobre" aponta para estes arquivos.
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/licenses/" DESTINATION "licenses")
 
 # O app é compilado com /MD, então depende do runtime do Visual C++. Ele não é
 # copiado como DLL solta: o instalador executa este redistribuível, que é a

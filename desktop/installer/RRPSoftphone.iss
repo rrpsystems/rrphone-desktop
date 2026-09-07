@@ -43,6 +43,9 @@ PrivilegesRequired=admin
 CloseApplications=yes
 RestartApplications=no
 WizardStyle=modern
+; Mostra a GPLv3 no assistente: é a forma mais direta de notificar os direitos
+; a quem instala, que é exatamente o que a licença pede.
+LicenseFile=..\licenses\gpl-3.0.txt
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
@@ -62,10 +65,14 @@ Name: "desktopicon"; Description: "Criar atalho na área de trabalho"; GroupDesc
 Source: "{#DistDir}\{#AppExe}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#DistDir}\*"; DestDir: "{app}"; Excludes: "{#AppExe},redist\*"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Não instalado junto do app: é executado uma vez e descartado.
+; Textos de licença e avisos de terceiros. A GPL exige que quem recebe o
+; binário receba os termos junto — quem instalou nunca vai ao repositório.
+Source: "..\licenses\*"; DestDir: "{app}\licenses"; Flags: ignoreversion
 Source: "{#DistDir}\redist\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall; Check: NeedsVCRedist
 
 [Icons]
 Name: "{group}\{#AppName}"; Filename: "{app}\{#AppExe}"
+Name: "{group}\Licenças e avisos de terceiros"; Filename: "{app}\licenses\THIRD-PARTY-NOTICES.md"
 Name: "{group}\Desinstalar {#AppName}"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\{#AppName}"; Filename: "{app}\{#AppExe}"; Tasks: desktopicon
 

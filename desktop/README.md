@@ -8,12 +8,43 @@ Não é um fork do MicroSip — ver Seção 2 do PRD para a justificativa.
 
 ## Licenciamento
 
-liblinphone é GPLv3. Decisão da RRP: **este repositório vai ser público no
-GitHub**, então a obrigação de disponibilizar o código-fonte da GPLv3 é
-satisfeita naturalmente — não é necessária a licença comercial da Belledonne
-Communications para uso fechado. Se essa decisão mudar no futuro (ex.: algum
-módulo específico precisar ficar fechado), revisitar esse ponto antes de
-distribuir um binário.
+RRP Softphone — Copyright © 2026 RRP Systems Ltda.
+Distribuído sob a **GNU General Public License v3** ([`LICENSE`](../LICENSE)).
+Componentes de terceiros e suas licenças:
+[`licenses/THIRD-PARTY-NOTICES.md`](licenses/THIRD-PARTY-NOTICES.md).
+
+**A restrição do projeto é o liblinphone, não o Qt.** Os módulos do Qt que
+usamos (Core, Gui, Widgets, Network, Xml, Svg) são LGPLv3, que permitiria até
+uma aplicação fechada desde que o Qt fosse linkado dinamicamente — que é o que
+já fazemos, com as `Qt6*.dll` ao lado do executável. Quem obriga o projeto a
+ser aberto é o liblinphone (GPLv3), e o bcg729 junto com ele. Trocar de toolkit
+não daria liberdade nenhuma enquanto o motor SIP for esse; sair da GPL exigiria
+a licença comercial da Belledonne.
+
+### O que precisa acontecer a cada versão distribuída
+
+Publicar o repositório **não basta sozinho**: a obrigação nasce quando alguém
+recebe o binário, e quem instalou não vai ao GitHub. Por isso:
+
+1. **O instalador leva os textos.** `licenses/` é instalada junto do app, o
+   assistente exibe a GPLv3 na tela de licença, e o menu Iniciar ganha um
+   atalho para os avisos de terceiros.
+2. **O app diz de onde veio.** Bandeja → **Sobre** mostra versão, copyright,
+   licença, a ausência de garantia e o link do repositório. É a via pela qual
+   quem recebeu só o executável toma ciência dos direitos que a GPL lhe dá.
+3. **Cada release vira uma tag.** O *Corresponding Source* de um binário é o
+   fonte exato que o gerou. Sem `v1.0.2` no repositório, apontar "está no
+   GitHub" não identifica o que foi compilado — e o repositório continua
+   andando depois do release.
+4. **As bibliotecas que recompilamos precisam ser reproduzíveis.**
+   `mediastreamer2.dll` e `libbcg729.dll` não são os binários oficiais: nós os
+   geramos do fonte upstream com outros sinalizadores de build. O procedimento
+   está documentado neste README, o que permite reconstruí-los a partir do
+   fonte público — exigência da GPLv3 para quem redistribui binários próprios.
+
+O titular do copyright vem de `RRP_COPYRIGHT_HOLDER` no `CMakeLists.txt` e
+alimenta as propriedades do executável e a tela Sobre; mudar a razão social é
+mudar essa linha.
 
 ## ✅ Estado deste código
 
