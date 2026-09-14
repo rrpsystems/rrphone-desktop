@@ -4,9 +4,8 @@
 
 // D-16 — one <contact> row from the remote XML phonebook.
 // Field set and names follow the widely used <contacts>/<contact> schema
-// documented in product-docs/RRP_Softphone_Desktop_PRD_Lite_v1.0.md, Section 8,
-// so an XML a customer already publishes can be pointed at this app without
-// any conversion.
+// (see the example in ContactsXmlFetcher.h), so an XML a customer already
+// publishes can be pointed at this app without any conversion.
 struct Contact {
     QString name;
     QString number;   // dialed on click/double-click

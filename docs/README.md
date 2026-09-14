@@ -12,7 +12,7 @@ que sempre resolve para a release mais recente, porque o asset publicado tem
 sempre esse nome fixo — sem a versão, que já está na tag, nas propriedades do
 `.exe` e na tela Sobre. Publicar é um comando só
 (`.\installer\publish-release.ps1`); o procedimento está em
-[`../desktop/README.md`](../desktop/README.md#publicando-uma-release-download-hospedado-no-github-sem-custo).
+[`../README.md`](../README.md#publicando-uma-release-download-hospedado-no-github-sem-custo).
 
 ## Habilitando o GitHub Pages
 

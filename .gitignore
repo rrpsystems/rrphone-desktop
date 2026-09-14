@@ -4,13 +4,13 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Desktop (Qt/CMake) build output — any build-* / build dir, not just "build"
+# Build output (Qt/CMake) — any build-* / build dir, not just "build"
 # (e.g. build-msvc/, build-mingw/), so it doesn't matter what a kit names it.
-desktop/build*/
-desktop/**/CMakeFiles/
-desktop/**/CMakeCache.txt
-desktop/**/*.autosave
-desktop/**/*_autogen/
+build*/
+**/CMakeFiles/
+**/CMakeCache.txt
+**/*.autosave
+**/*_autogen/
 
 # Local, machine-specific — never commit real SIP credentials
 *.rrpprofile
@@ -18,22 +18,16 @@ desktop/**/*_autogen/
 # liblinphone SDK — huge (100s of MB, includes .pdb debug symbols) and
 # downloadable from https://download.linphone.org/releases/windows/sdk/,
 # never belongs in git history.
-desktop/third_party/
+third_party/
 linphone-sdk*.zip
 
 # Private .rrpprofile encryption key, injected at build time (see
-# RRP_PROFILE_KEY_FILE in desktop/CMakeLists.txt). Never commit it — and note
-# that it is not a true secret either, since it ships inside the binary.
-desktop/profile_key.txt
+# RRP_PROFILE_KEY_FILE in CMakeLists.txt). Never commit it — and note that it
+# is not a true secret either, since it ships inside the binary.
+profile_key.txt
 
 # Árvore de distribuição (cmake --install) e a saída do Inno Setup: ambas são
 # geradas a partir do build, não fonte.
-desktop/dist/
-desktop/installer/Output/
-desktop/installer/version.iss
-
-# O app Android vive em repositório próprio: cada plataforma anda no seu ritmo,
-# e um bug ou feature de uma raramente corresponde à outra. Os arquivos ficam
-# aqui em disco só até serem movidos para lá — não devem entrar neste histórico,
-# que é do cliente desktop.
-android/
+dist/
+installer/Output/
+installer/version.iss

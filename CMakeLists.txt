@@ -63,7 +63,7 @@ find_library(BCTOOLBOX_LIBRARY
 # does not make one confidential. For that, export with a passphrase.
 #
 # To use a private key:
-#   openssl rand -hex 32 > desktop/profile_key.txt     (gitignored)
+#   openssl rand -hex 32 > profile_key.txt     (gitignored)
 # then reconfigure. Without the file, the published development key in
 # ProfileCipher.cpp is used, so a fresh clone builds and runs with no setup.
 #
