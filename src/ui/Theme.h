@@ -19,6 +19,16 @@ constexpr auto kAccentBlue = "#2E9FDB";  // RRP logo orbit / "Systems" wordmark
 constexpr auto kSuccessGreen = "#2E9C4C";      // call action
 constexpr auto kSuccessGreenMuted = "#1F4A2E"; // call action, nothing to dial
 constexpr auto kDangerRed = "#C0392B";         // hangup
+constexpr auto kAmber = "#E0A030";             // warnings on the hook line
+
+// Shapes shared with the Android app (android/.../ui/theme/Color.kt and
+// ui/components/Components.kt): keypad keys and the main call button are
+// pills, call actions are circles with the label underneath, panels are
+// cards with 12px corners. Change a value here, change it there too — the
+// two apps are meant to read as the same product.
+constexpr int kRoundActionSize = 42; // Mudo / Espera / Transferir
+constexpr int kPillHeight = 40;      // Ligar, Desligar, Atender...
+constexpr int kCardRadius = 12;
 
 QString styleSheet();
 }

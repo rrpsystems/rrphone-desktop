@@ -16,6 +16,7 @@
 #include <QDir>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QGridLayout>
 #include <QPixmap>
 #include <QIcon>
 #include <QTimer>
@@ -60,12 +61,51 @@ QToolButton *makeIconButton(const QString &iconPath, const QString &tooltip, QWi
     button->setAutoRaise(true);
     return button;
 }
+
+// A call action as on the Android call screen: a round icon button with its
+// label underneath. Returns the button; its container is the parent widget,
+// and enabling/disabling goes through the container so the label greys out
+// together with the circle.
+QPushButton *makeRoundAction(const QString &iconPath, const QString &label, QWidget *parent) {
+    auto *container = new QWidget(parent);
+    auto *button = new QPushButton(container);
+    button->setObjectName(QStringLiteral("round"));
+    button->setIcon(QIcon(iconPath));
+    button->setIconSize(QSize(18, 18));
+    button->setToolTip(label);
+    button->setAccessibleName(label);
+    button->setCursor(Qt::PointingHandCursor);
+
+    auto *text = new QLabel(label, container);
+    text->setObjectName(QStringLiteral("roundLabel"));
+    text->setAlignment(Qt::AlignCenter);
+
+    auto *layout = new QVBoxLayout(container);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(3);
+    layout->addWidget(button, 0, Qt::AlignHCenter);
+    layout->addWidget(text, 0, Qt::AlignHCenter);
+    return button;
+}
+
+void setRoundActionEnabled(QPushButton *button, bool enabled) {
+    button->parentWidget()->setEnabled(enabled);
+}
+
+QToolButton *makeNavButton(const QString &iconPath, const QString &label, const QString &tooltip, QWidget *parent) {
+    auto *button = makeIconButton(iconPath, tooltip, parent);
+    button->setObjectName(QStringLiteral("nav"));
+    button->setText(label);
+    button->setToolButtonStyle(Qt::ToolButtonTextUnderIcon);
+    button->setIconSize(QSize(18, 18));
+    return button;
+}
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     setWindowTitle(tr("RRP Softphone"));
     setWindowIcon(QIcon(":/rrp_logo.png"));
-    resize(286, 610);
+    resize(290, 640);
     setMinimumWidth(268);
 
     m_sipCore = new SipCoreManager(this);
@@ -187,9 +227,14 @@ QWidget *MainWindow::buildStatusRow() {
     layout->addStretch();
     layout->addWidget(m_accountLabel);
 
+    // Selector-scoped: an unscoped rule here would cascade into the labels
+    // (and give each of them its own border line).
     auto *row = new QWidget(this);
+    row->setObjectName(QStringLiteral("statusRow"));
+    row->setAttribute(Qt::WA_StyledBackground);
     row->setLayout(layout);
-    row->setStyleSheet(QStringLiteral("background-color: %1; border-bottom: 1px solid %2;")
+    row->setStyleSheet(QStringLiteral("QWidget#statusRow { background-color: %1; border-bottom: 1px solid %2; }"
+                                      "QLabel { background: transparent; }")
                             .arg(Theme::kPanel, Theme::kBorder));
     return row;
 }
@@ -200,14 +245,14 @@ QWidget *MainWindow::buildDisplayArea() {
     // Page 0 — idle/dialing: logo, replaced by the typed number as you dial.
     m_logoLabel = new QLabel(this);
     m_logoLabel->setAlignment(Qt::AlignCenter);
-    m_logoLabel->setPixmap(QPixmap(":/rrp_logo.png").scaled(76, 76, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    m_logoLabel->setPixmap(QPixmap(":/rrp_logo.png").scaled(104, 104, Qt::KeepAspectRatio, Qt::SmoothTransformation));
 
     m_numberEdit = new QLineEdit(this);
     m_numberEdit->setAlignment(Qt::AlignCenter);
     m_numberEdit->setFrame(false);
     m_numberEdit->setPlaceholderText(tr("Ramal ou número"));
-    m_numberEdit->setFixedHeight(30);
-    m_numberEdit->setStyleSheet(QStringLiteral("background: transparent; border: none; font-size: 20px; color: %1;")
+    m_numberEdit->setFixedHeight(40);
+    m_numberEdit->setStyleSheet(QStringLiteral("background: transparent; border: none; font-size: 28px; font-weight: 300; color: %1;")
                                      .arg(Theme::kTextPrimary));
     // Not QLineEdit::returnPressed: that signal fires and the widget then
     // *ignores* the key event, so it keeps bubbling up to keyPressEvent and the
@@ -229,9 +274,9 @@ QWidget *MainWindow::buildDisplayArea() {
         m_logoLabel->setVisible(empty && !composing);
         m_numberEdit->setVisible(!empty || composing);
         m_backspaceButton->setVisible(!empty);
-        // Nothing to dial, nothing to press — except when there is a number to
-        // redial, which is what the key does on an empty display.
-        m_actionButton->setEnabled(!empty || !lastDialedNumber().isEmpty());
+        if (!composing) {
+            refreshIdleActionButton();
+        }
         if (empty && !composing) {
             setFocus();
         } else if (!m_numberEdit->hasFocus()) {
@@ -249,7 +294,14 @@ QWidget *MainWindow::buildDisplayArea() {
     m_backspaceButton->setAccessibleName(tr("Apagar"));
     m_backspaceButton->setToolTip(tr("Apagar (segure para limpar)"));
     m_backspaceButton->setCursor(Qt::PointingHandCursor);
-    m_backspaceButton->setFixedSize(30, 30);
+    m_backspaceButton->setFixedSize(34, 26);
+    // Hidden while there is nothing to erase, but its slot above the "3" key
+    // stays reserved so the hook line doesn't shift when the first digit lands.
+    {
+        QSizePolicy policy = m_backspaceButton->sizePolicy();
+        policy.setRetainSizeWhenHidden(true);
+        m_backspaceButton->setSizePolicy(policy);
+    }
     m_backspaceButton->setAutoRepeat(true);
     m_backspaceButton->setAutoRepeatDelay(500);
     m_backspaceButton->setAutoRepeatInterval(90);
@@ -264,20 +316,11 @@ QWidget *MainWindow::buildDisplayArea() {
         m_numberEdit->setText(current);
     });
 
-    auto *numberRow = new QHBoxLayout();
-    numberRow->setContentsMargins(0, 0, 0, 0);
-    numberRow->setSpacing(2);
-    // The spacer mirrors the button's width so the number stays optically
-    // centred in the display instead of being pushed left by the key.
-    numberRow->addSpacing(m_backspaceButton->width());
-    numberRow->addWidget(m_numberEdit, 1);
-    numberRow->addWidget(m_backspaceButton);
-
     auto *dialLayout = new QVBoxLayout();
     dialLayout->setContentsMargins(10, 8, 10, 8);
     dialLayout->addStretch();
     dialLayout->addWidget(m_logoLabel);
-    dialLayout->addLayout(numberRow);
+    dialLayout->addWidget(m_numberEdit);
     dialLayout->addStretch();
     auto *dialPage = new QWidget(this);
     dialPage->setLayout(dialLayout);
@@ -305,23 +348,11 @@ QWidget *MainWindow::buildDisplayArea() {
     m_displayStack = new QStackedWidget(this);
     m_displayStack->addWidget(dialPage);
     m_displayStack->addWidget(callPage);
-    m_displayStack->setFixedHeight(132);
-    return m_displayStack;
-}
+    m_displayStack->setMinimumHeight(108);
 
-// --- Hook line: call state on the left, call actions on the right, like the
-// "On Hook  [icons]" row in the reference. ---------------------------------
-QWidget *MainWindow::buildHookRow() {
-    m_hookLabel = new QLabel(this);
-    m_hookLabel->setStyleSheet(QStringLiteral("color: %1; font-size: 11px;").arg(Theme::kTextSecondary));
-
-    m_muteButton = makeIconButton(QStringLiteral(":/icons/mute.svg"), tr("Mudo"), this);
-    m_muteButton->setCheckable(true);
-    connect(m_muteButton, &QToolButton::toggled, this, [this](bool muted) {
-        m_sipCore->setMuted(muted);
-        refreshHookLabel();
-    });
-
+    // Não perturbe and siga-me live in the top-right corner, right under the
+    // extension in the status line, where they describe the extension's state
+    // — not on the hook line, where they competed with the erase key.
     m_dndButton = makeIconButton(QStringLiteral(":/icons/dnd.svg"),
                                   tr("Não perturbe — recusa chamadas recebidas"), this);
     m_dndButton->setCheckable(true);
@@ -334,14 +365,45 @@ QWidget *MainWindow::buildHookRow() {
     // first, so the checked state is set by us, not by the click.
     connect(m_forwardButton, &QToolButton::clicked, this, &MainWindow::onForwardButtonClicked);
 
-    auto *layout = new QHBoxLayout();
-    layout->setContentsMargins(10, 2, 8, 2);
-    layout->setSpacing(2);
-    layout->addWidget(m_hookLabel);
-    layout->addStretch();
-    layout->addWidget(m_muteButton);
-    layout->addWidget(m_dndButton);
-    layout->addWidget(m_forwardButton);
+    auto *modesRow = new QHBoxLayout();
+    modesRow->setContentsMargins(0, 2, 6, 0);
+    modesRow->setSpacing(2);
+    modesRow->addStretch();
+    modesRow->addWidget(m_dndButton);
+    modesRow->addWidget(m_forwardButton);
+
+    auto *display = new QWidget(this);
+    auto *displayLayout = new QVBoxLayout(display);
+    displayLayout->setContentsMargins(0, 0, 0, 0);
+    displayLayout->setSpacing(0);
+    displayLayout->addLayout(modesRow);
+    displayLayout->addWidget(m_displayStack, 1);
+    return display;
+}
+
+// --- Hook line: call state on the left, call actions on the right, like the
+// "On Hook  [icons]" row in the reference. ---------------------------------
+QWidget *MainWindow::buildHookRow() {
+    m_hookLabel = new QLabel(this);
+    m_hookLabel->setStyleSheet(QStringLiteral("color: %1; font-size: 11px;").arg(Theme::kTextSecondary));
+
+
+    // Same three columns as the keypad (DialPadWidget: 14px margins, 10px
+    // gaps), so the erase key sits over the "3", flush with its right edge,
+    // as on Android.
+    auto *left = new QHBoxLayout();
+    left->setContentsMargins(0, 0, 0, 0);
+    left->setSpacing(2);
+    left->addWidget(m_hookLabel, 1);
+
+    auto *layout = new QGridLayout();
+    layout->setContentsMargins(14, 2, 14, 2);
+    layout->setHorizontalSpacing(10);
+    layout->setColumnStretch(0, 1);
+    layout->setColumnStretch(1, 1);
+    layout->setColumnStretch(2, 1);
+    layout->addLayout(left, 0, 0, 1, 2);
+    layout->addWidget(m_backspaceButton, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
 
     auto *row = new QWidget(this);
     row->setLayout(layout);
@@ -351,43 +413,60 @@ QWidget *MainWindow::buildHookRow() {
     return row;
 }
 
-// --- Action row: hold and transfer flank the main call button. ------------
+// --- Call actions: a row of round buttons over the main pill button, the
+// same arrangement as the Android call screen, kept in the main window so
+// transferring never leaves it. ------------------------------------------------
 QWidget *MainWindow::buildActionRow() {
-    m_holdButton = new QPushButton(this);
-    m_holdButton->setIcon(QIcon(QStringLiteral(":/icons/hold.svg")));
-    m_holdButton->setIconSize(QSize(16, 16));
-    m_holdButton->setToolTip(tr("Espera"));
-    m_holdButton->setAccessibleName(tr("Espera"));
+    m_muteButton = makeRoundAction(QStringLiteral(":/icons/mute.svg"), tr("Mudo"), this);
+    m_muteButton->setCheckable(true);
+    connect(m_muteButton, &QPushButton::toggled, this, [this](bool muted) {
+        m_sipCore->setMuted(muted);
+        refreshHookLabel();
+    });
+
+    m_holdButton = makeRoundAction(QStringLiteral(":/icons/hold.svg"), tr("Espera"), this);
     m_holdButton->setCheckable(true);
-    m_holdButton->setFixedWidth(52);
-    m_holdButton->setMinimumHeight(34);
     connect(m_holdButton, &QPushButton::toggled, this, [this](bool held) { m_sipCore->setHeld(held); });
 
-    m_transferButton = new QPushButton(this);
-    m_transferButton->setIcon(QIcon(QStringLiteral(":/icons/transfer.svg")));
-    m_transferButton->setIconSize(QSize(16, 16));
-    m_transferButton->setToolTip(tr("Transferir"));
-    m_transferButton->setAccessibleName(tr("Transferir"));
-    m_transferButton->setFixedWidth(52);
-    m_transferButton->setMinimumHeight(34);
+    m_transferButton = makeRoundAction(QStringLiteral(":/icons/transfer.svg"), tr("Transferir"), this);
     connect(m_transferButton, &QPushButton::clicked, this, &MainWindow::onTransferClicked);
 
+    // Only shown while there is a call to act on: idle, all three would just
+    // sit there disabled. The space goes to the display area instead.
+    m_callActions = new QWidget(this);
+    auto *roundRow = new QHBoxLayout(m_callActions);
+    roundRow->setContentsMargins(0, 0, 0, 0);
+    roundRow->addStretch();
+    roundRow->addWidget(m_muteButton->parentWidget());
+    roundRow->addStretch();
+    roundRow->addWidget(m_holdButton->parentWidget());
+    roundRow->addStretch();
+    roundRow->addWidget(m_transferButton->parentWidget());
+    roundRow->addStretch();
+
     m_actionButton = new QPushButton(tr("Ligar"), this);
-    m_actionButton->setMinimumHeight(34);
+    m_actionButton->setFixedHeight(Theme::kPillHeight);
+    m_actionButton->setIconSize(QSize(18, 18));
+    m_actionButton->setCursor(Qt::PointingHandCursor);
     connect(m_actionButton, &QPushButton::clicked, this, &MainWindow::onActionButtonClicked);
 
     m_secondaryButton = new QPushButton(tr("Recusar"), this);
-    m_secondaryButton->setMinimumHeight(34);
+    m_secondaryButton->setFixedHeight(Theme::kPillHeight);
+    m_secondaryButton->setCursor(Qt::PointingHandCursor);
     m_secondaryButton->setVisible(false);
     connect(m_secondaryButton, &QPushButton::clicked, this, &MainWindow::onSecondaryButtonClicked);
 
-    auto *layout = new QHBoxLayout();
-    layout->setContentsMargins(6, 4, 6, 4);
-    layout->setSpacing(5);
-    layout->addWidget(m_holdButton);
-    layout->addWidget(m_actionButton, 1);
-    layout->addWidget(m_secondaryButton);
-    layout->addWidget(m_transferButton);
+    auto *pillRow = new QHBoxLayout();
+    pillRow->setContentsMargins(36, 0, 36, 0);
+    pillRow->setSpacing(10);
+    pillRow->addWidget(m_secondaryButton, 1);
+    pillRow->addWidget(m_actionButton, 1);
+
+    auto *layout = new QVBoxLayout();
+    layout->setContentsMargins(6, 8, 6, 4);
+    layout->setSpacing(10);
+    layout->addWidget(m_callActions);
+    layout->addLayout(pillRow);
 
     auto *row = new QWidget(this);
     row->setLayout(layout);
@@ -470,17 +549,18 @@ QWidget *MainWindow::buildVolumeControls() {
 
 // --- Bottom icon nav, like the icon strip at the foot of the reference. ---
 QWidget *MainWindow::buildBottomBar() {
-    m_navDialer = makeIconButton(QStringLiteral(":/icons/keypad.svg"), tr("Discador"), this);
+    m_navDialer = makeNavButton(QStringLiteral(":/icons/keypad.svg"), tr("Teclado"), tr("Discador"), this);
     m_navDialer->setCheckable(true);
     m_navDialer->setChecked(true);
 
-    m_navContacts = makeIconButton(QStringLiteral(":/icons/contacts.svg"), tr("Contatos"), this);
+    m_navContacts = makeNavButton(QStringLiteral(":/icons/contacts.svg"), tr("Contatos"), tr("Contatos"), this);
     m_navContacts->setCheckable(true);
 
-    m_navHistory = makeIconButton(QStringLiteral(":/icons/history.svg"), tr("Histórico de chamadas"), this);
+    m_navHistory = makeNavButton(QStringLiteral(":/icons/history.svg"), tr("Histórico"), tr("Histórico de chamadas"),
+                                  this);
     m_navHistory->setCheckable(true);
 
-    m_navSettings = makeIconButton(QStringLiteral(":/icons/settings.svg"), tr("Configurações"), this);
+    m_navSettings = makeNavButton(QStringLiteral(":/icons/settings.svg"), tr("Ajustes"), tr("Configurações"), this);
 
     // One helper keeps the three page buttons mutually exclusive; Qt's
     // auto-exclusive only works for buttons sharing a parent layout group.
@@ -525,9 +605,13 @@ QWidget *MainWindow::buildBottomBar() {
     layout->addStretch();
     layout->addWidget(m_navSettings);
 
+    // Selector-scoped, so the nav buttons keep their own look (the selected
+    // pill) instead of inheriting the bar's background and border.
     auto *bar = new QWidget(this);
+    bar->setObjectName(QStringLiteral("navBar"));
+    bar->setAttribute(Qt::WA_StyledBackground);
     bar->setLayout(layout);
-    bar->setStyleSheet(QStringLiteral("background-color: %1; border-top: 1px solid %2;")
+    bar->setStyleSheet(QStringLiteral("QWidget#navBar { background-color: %1; border-top: 1px solid %2; }")
                             .arg(Theme::kPanel, Theme::kBorder));
     return bar;
 }
@@ -539,7 +623,7 @@ QWidget *MainWindow::buildPhonePage() {
     auto *layout = new QVBoxLayout();
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
-    layout->addWidget(buildDisplayArea());
+    layout->addWidget(buildDisplayArea(), 1);
     layout->addWidget(buildHookRow());
     layout->addWidget(m_dialPad);
     layout->addWidget(buildActionRow());
@@ -689,10 +773,13 @@ void MainWindow::applyUiCallState(UiCallState state) {
         }
     }
 
-    m_muteButton->setEnabled(inCall);
-    m_holdButton->setEnabled(inCall);
+    // Visible for the whole life of a conversation, transfer flow included;
+    // not while it is only ringing (in or out) — nothing to mute or hold yet.
+    m_callActions->setVisible(inCall || dialingTransfer || consulting);
+    setRoundActionEnabled(m_muteButton, inCall);
+    setRoundActionEnabled(m_holdButton, inCall);
     // No nested transfers: the button only starts a transfer from a call.
-    m_transferButton->setEnabled(inCall);
+    setRoundActionEnabled(m_transferButton, inCall);
     // The whole transfer flow counts as "still on a call" here. Leaving
     // dialingTransfer out used to un-hold the call the instant the transfer
     // screen opened: onTransferClicked() parks the call, then this ran and
@@ -715,15 +802,20 @@ void MainWindow::applyUiCallState(UiCallState state) {
     // button reads as "not available right now" rather than as a different
     // control.
     const auto actionStyle = [](const char *color, const char *disabledColor) {
-        return QStringLiteral("QPushButton { background-color: %1; color: white; font-weight: 600; }"
+        return QStringLiteral("QPushButton { background-color: %1; color: white; font-weight: 600;"
+                               " font-size: 13px; border-radius: 20px; }"
                                "QPushButton:disabled { background-color: %2; color: %3; }")
             .arg(QLatin1String(color), QLatin1String(disabledColor), QLatin1String(Theme::kTextSecondary));
     };
+    // Pills, like the Android "Ligar" button: the radius is half of
+    // Theme::kPillHeight.
     const QString neutralSecondary =
-        QStringLiteral("QPushButton { background-color: %1; color: %2; }")
-            .arg(Theme::kButton, Theme::kTextPrimary);
+        QStringLiteral("QPushButton { background-color: %1; color: %2; font-size: 13px; border-radius: 20px; }"
+                       "QPushButton:hover { background-color: %3; }")
+            .arg(Theme::kButton, Theme::kTextPrimary, Theme::kButtonHover);
     const QString dangerSecondary =
-        QStringLiteral("QPushButton { background-color: %1; color: white; font-weight: 600; }")
+        QStringLiteral("QPushButton { background-color: %1; color: white; font-weight: 600;"
+                       " font-size: 13px; border-radius: 20px; }")
             .arg(Theme::kDangerRed);
 
     m_secondaryButton->setVisible(incoming || waiting || twoCalls || dialingTransfer || consulting ||
@@ -780,16 +872,14 @@ void MainWindow::applyUiCallState(UiCallState state) {
         m_actionButton->setStyleSheet(actionStyle(Theme::kAccentBlue, Theme::kSuccessGreenMuted));
         m_actionButton->setEnabled(!m_numberEdit->text().isEmpty());
     } else {
-        m_actionButton->setText(tr("Ligar"));
         m_actionButton->setStyleSheet(actionStyle(Theme::kSuccessGreen, Theme::kSuccessGreenMuted));
-        // Idle: dialable with a number on the display, and also on an empty
-        // display when there is something to redial.
-        const bool canRedial = !lastDialedNumber().isEmpty();
-        m_actionButton->setEnabled(!m_numberEdit->text().isEmpty() || canRedial);
-        m_actionButton->setToolTip(m_numberEdit->text().isEmpty() && canRedial
-                                        ? tr("Rediscar %1").arg(lastDialedNumber())
-                                        : QString());
+        refreshIdleActionButton();
     }
+
+    // Phone handset on every green action, hung-up handset on the red one —
+    // the same icons as the Android buttons.
+    m_actionButton->setIcon(QIcon(inCall && !waiting ? QStringLiteral(":/icons/hangup.svg")
+                                                     : QStringLiteral(":/icons/call.svg")));
 
     if (inCall || consulting) {
         // The clock is NOT started here: while the phone is still ringing on
@@ -809,6 +899,18 @@ void MainWindow::applyUiCallState(UiCallState state) {
     // The hook line carries "quem está aguardando"/"quem está em espera",
     // which only this function knows has just changed.
     refreshHookLabel();
+}
+
+// Idle call key, as on Android: "Rediscar" while the display is empty and
+// there is a previous number, "Ligar" as soon as anything is typed. Nothing to
+// dial and nothing to redial leaves it disabled.
+void MainWindow::refreshIdleActionButton() {
+    const bool empty = m_numberEdit->text().trimmed().isEmpty();
+    const QString last = lastDialedNumber();
+    const bool redial = empty && !last.isEmpty();
+    m_actionButton->setText(redial ? tr("Rediscar") : tr("Ligar"));
+    m_actionButton->setToolTip(redial ? tr("Traz de volta %1").arg(last) : QString());
+    m_actionButton->setEnabled(!empty || redial);
 }
 
 void MainWindow::onRemotePartyChanged(const QString &displayName, const QString &number) {
@@ -866,7 +968,7 @@ void MainWindow::refreshHookLabel() {
     } else if (m_uiCallState == UiCallState::TwoCalls && !m_heldPeer.isEmpty()) {
         parts << badge(tr("%1 em espera").arg(m_heldPeer), Theme::kAccentTeal);
     }
-    if (m_muteButton->isChecked()) {
+    if (m_muteButton != nullptr && m_muteButton->isChecked()) {
         parts << badge(tr("Mudo"), Theme::kDangerRed);
     }
     if (m_dndButton->isChecked()) {
@@ -917,7 +1019,7 @@ void MainWindow::updatePresenceLabel() {
     } else if (m_dndButton->isChecked()) {
         paint(tr("● Não perturbe"), Theme::kDangerRed);
     } else {
-        paint(tr("● Disponível"), Theme::kAccentTeal);
+        paint(tr("● Disponível"), Theme::kSuccessGreen);
     }
 }
 
@@ -1109,7 +1211,13 @@ void MainWindow::recordCallInHistory() {
     record.incoming = m_currentCallIncoming;
     record.answered = m_currentCallAnswered;
     record.durationSeconds = m_currentCallAnswered ? m_callSeconds : 0;
-    if (!m_currentCallAnswered) {
+    const QString elsewhere = m_currentCallIncoming ? m_sipCore->lastCallEndNote() : QString();
+    if (!m_currentCallAnswered && !elsewhere.isEmpty()) {
+        // Answered (or declined) on another device of the same extension:
+        // not a missed call. It stays "not answered here" (no duration), and
+        // the history panel shows it in neutral grey instead of missed-red.
+        record.note = elsewhere;
+    } else if (!m_currentCallAnswered) {
         record.note = m_currentCallIncoming ? tr("não atendida") : tr("sem resposta");
     } else if (!m_currentCallConnectedPeer.isEmpty() && m_currentCallConnectedPeer != m_currentCallPeer) {
         // Landed somewhere other than what was dialed. `peer` stays as the
@@ -1129,7 +1237,9 @@ void MainWindow::recordCallInHistory() {
     }
     // The number just used becomes the redial target, so the call key has to
     // come back enabled even with the display empty.
-    m_actionButton->setEnabled(!m_numberEdit->text().trimmed().isEmpty() || !lastDialedNumber().isEmpty());
+    if (m_uiCallState == UiCallState::Idle) {
+        refreshIdleActionButton();
+    }
 }
 
 void MainWindow::onCallWaiting(const QString &displayName, const QString &number) {

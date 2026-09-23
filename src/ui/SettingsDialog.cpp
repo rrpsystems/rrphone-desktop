@@ -3,7 +3,8 @@
 #include <QFormLayout>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QTabWidget>
+#include <QFrame>
+#include <QScrollArea>
 #include <QLineEdit>
 #include <QComboBox>
 #include <QListWidget>
@@ -20,11 +21,33 @@ namespace {
 constexpr int RoleMimeType = Qt::UserRole;
 constexpr int RoleClockRate = Qt::UserRole + 1;
 constexpr int RoleChannels = Qt::UserRole + 2;
+
+// One titled block of the settings page — the same "card" the Android app
+// uses in Ajustes, styled by QFrame#card / QLabel#cardTitle in Theme.cpp.
+QFrame *makeCard(const QString &title, QLayout *content, QWidget *parent) {
+    auto *card = new QFrame(parent);
+    card->setObjectName(QStringLiteral("card"));
+    auto *heading = new QLabel(title, card);
+    heading->setObjectName(QStringLiteral("cardTitle"));
+    auto *layout = new QVBoxLayout(card);
+    layout->setContentsMargins(14, 12, 14, 14);
+    layout->setSpacing(8);
+    layout->addWidget(heading);
+    layout->addLayout(content);
+    return card;
+}
+
+QLabel *makeHint(const QString &text, QWidget *parent) {
+    auto *label = new QLabel(text, parent);
+    label->setObjectName(QStringLiteral("hint"));
+    label->setWordWrap(true);
+    return label;
+}
 }
 
 SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     setWindowTitle(tr("Configurações"));
-    resize(420, 480);
+    resize(460, 640);
 
     // --- Account tab (D-01) -------------------------------------------------
     m_displayNameEdit = new QLineEdit(this);
@@ -50,8 +73,6 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     accountForm->addRow(tr("Senha"), m_passwordEdit);
     accountForm->addRow(tr("Servidor SIP"), m_domainEdit);
     accountForm->addRow(tr("Transporte"), m_transportCombo);
-    auto *accountTab = new QWidget(this);
-    accountTab->setLayout(accountForm);
 
     // --- Audio tab (D-14 codecs, D-15 DTMF) ---------------------------------
     m_codecList = new QListWidget(this);
@@ -141,21 +162,24 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
            "diferentes do microfone. Em compensação, levanta o ruído de fundo nas\n"
            "pausas — por isso vem desligado."));
 
-    auto *processingLabel = new QLabel(
-        tr("Processamento do microfone (vale a partir da próxima chamada):"), this);
-
     auto *audioLayout = new QVBoxLayout();
     audioLayout->addLayout(deviceForm);
-    audioLayout->addWidget(processingLabel);
+    audioLayout->addSpacing(4);
+    audioLayout->addWidget(makeHint(tr("Processamento do microfone — vale a partir da próxima chamada."), this));
     audioLayout->addWidget(m_noiseSuppressionCheck);
     audioLayout->addWidget(m_echoCancellationCheck);
     audioLayout->addWidget(m_agcCheck);
-    audioLayout->addWidget(new QLabel(tr("Codecs de áudio (prioridade e habilitação):"), this));
-    audioLayout->addWidget(m_codecList);
-    audioLayout->addWidget(new QLabel(tr("Método de DTMF:"), this));
-    audioLayout->addWidget(m_dtmfCombo);
-    auto *audioTab = new QWidget(this);
-    audioTab->setLayout(audioLayout);
+
+    // Compact rows, and exactly as tall as the four codecs need.
+    m_codecList->setObjectName(QStringLiteral("codecList"));
+    m_codecList->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_codecList->setFixedHeight(4 * 22 + 6);
+    auto *codecLayout = new QVBoxLayout();
+    codecLayout->addWidget(makeHint(tr("Arraste para mudar a prioridade; desmarque para desabilitar."), this));
+    codecLayout->addWidget(m_codecList);
+    auto *dtmfForm = new QFormLayout();
+    dtmfForm->addRow(tr("Método de DTMF"), m_dtmfCombo);
+    codecLayout->addLayout(dtmfForm);
 
     // --- Calls tab: unconditional forwarding ("siga-me") --------------------
     m_forwardTargetEdit = new QLineEdit(this);
@@ -174,10 +198,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     auto *callsForm = new QFormLayout();
     callsForm->addRow(tr("Ao receber chamada"), m_incomingBehaviorCombo);
     callsForm->addRow(tr("Encaminhar chamadas para"), m_forwardTargetEdit);
-    callsForm->addRow(new QLabel(tr("Toda chamada recebida vai direto para esse ramal,\n"
-                                     "sem tocar aqui. Deixe em branco para desativar."), this));
-    auto *callsTab = new QWidget(this);
-    callsTab->setLayout(callsForm);
+    callsForm->addRow(makeHint(tr("Toda chamada recebida vai direto para esse ramal, sem tocar aqui. "
+                                  "Deixe em branco para desativar."), this));
 
     // --- Contacts tab (D-16) -------------------------------------------------
     m_contactsUrlEdit = new QLineEdit(this);
@@ -191,27 +213,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
 
     auto *contactsForm = new QFormLayout();
     contactsForm->addRow(tr("URL da lista de contatos"), m_contactsUrlEdit);
-    contactsForm->addRow(new QLabel(tr("Formato <contacts>/<contact>. Deixe em branco para não usar.")));
+    contactsForm->addRow(makeHint(tr("Formato <contacts>/<contact>. Deixe em branco para não usar."), this));
     contactsForm->addRow(m_replaceLocalContactsCheck);
-    auto *contactsTab = new QWidget(this);
-    contactsTab->setLayout(contactsForm);
-
-    auto *tabs = new QTabWidget(this);
-    tabs->addTab(accountTab, tr("Conta"));
-    tabs->addTab(audioTab, tr("Áudio"));
-    tabs->addTab(callsTab, tr("Chamadas"));
-    tabs->addTab(contactsTab, tr("Contatos"));
-
-    // Put the cursor in the field as soon as a tab with a single obvious
-    // input is opened — otherwise the user clicks the tab, types, and
-    // nothing happens because focus is still on the tab bar.
-    connect(tabs, &QTabWidget::currentChanged, this, [this, tabs](int index) {
-        if (tabs->tabText(index) == tr("Chamadas")) {
-            m_forwardTargetEdit->setFocus();
-        } else if (tabs->tabText(index) == tr("Contatos")) {
-            m_contactsUrlEdit->setFocus();
-        }
-    });
 
     // --- Profile import/export (D-13) ---------------------------------------
     auto *importButton = new QPushButton(tr("Importar configuração..."), this);
@@ -231,6 +234,33 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     profileRow->addWidget(importButton);
     profileRow->addWidget(exportButton);
 
+    auto *profileLayout = new QVBoxLayout();
+    profileLayout->addWidget(makeHint(tr("Um arquivo .rrpprofile leva a conta, os codecs, o DTMF e a agenda para "
+                                         "outro computador ou para o app do celular."), this));
+    profileLayout->addLayout(profileRow);
+    profileLayout->addWidget(m_exportPassphraseCheck);
+
+    // One scrolling page of titled cards instead of tabs — the same
+    // arrangement as Ajustes on Android, and nothing hides behind a tab.
+    auto *content = new QWidget(this);
+    content->setObjectName(QStringLiteral("scrollContent"));
+    auto *cards = new QVBoxLayout(content);
+    cards->setContentsMargins(12, 12, 12, 12);
+    cards->setSpacing(12);
+    cards->addWidget(makeCard(tr("Conta"), accountForm, content));
+    cards->addWidget(makeCard(tr("Chamadas"), callsForm, content));
+    cards->addWidget(makeCard(tr("Áudio"), audioLayout, content));
+    cards->addWidget(makeCard(tr("Codecs e DTMF"), codecLayout, content));
+    cards->addWidget(makeCard(tr("Agenda"), contactsForm, content));
+    cards->addWidget(makeCard(tr("Configuração"), profileLayout, content));
+    cards->addStretch();
+
+    auto *scroll = new QScrollArea(this);
+    scroll->setWidget(content);
+    scroll->setWidgetResizable(true);
+    scroll->setFrameShape(QFrame::NoFrame);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
     auto *saveButton = new QPushButton(tr("Salvar"), this);
     saveButton->setDefault(true);
     connect(saveButton, &QPushButton::clicked, this, &SettingsDialog::onSave);
@@ -241,18 +271,41 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     bottomRow->addWidget(saveButton);
     bottomRow->addWidget(closeButton);
 
+    bottomRow->setContentsMargins(12, 0, 12, 12);
+
     auto *layout = new QVBoxLayout(this);
-    layout->addWidget(tabs);
-    layout->addLayout(profileRow);
-    layout->addWidget(m_exportPassphraseCheck);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(8);
+    layout->addWidget(scroll, 1);
     layout->addLayout(bottomRow);
 }
 
 void SettingsDialog::setAvailableCodecs(const QList<CodecInfo> &codecs) {
-    m_codecList->clear();
+    // Always exactly the codecs this app offers: the given ones first, in
+    // their priority order, then any missing one unchecked. A profile only
+    // lists the enabled codecs, so without this a codec switched off once
+    // would vanish from the screen and could never be switched back on.
+    QList<CodecInfo> shown;
     for (const CodecInfo &c : codecs) {
-        auto *item = new QListWidgetItem(
-            QStringLiteral("%1 / %2 Hz / %3 ch").arg(c.mimeType).arg(c.clockRate).arg(c.channels));
+        if (Codecs::isSupported(c)) {
+            shown.append(c);
+        }
+    }
+    for (CodecInfo known : Codecs::supported()) {
+        const bool present = std::any_of(shown.cbegin(), shown.cend(), [&known](const CodecInfo &c) {
+            return c.mimeType.compare(known.mimeType, Qt::CaseInsensitive) == 0;
+        });
+        if (!present) {
+            known.enabled = false;
+            shown.append(known);
+        }
+    }
+
+    m_codecList->clear();
+    for (const CodecInfo &c : shown) {
+        // Just the name: each codec this app offers has a single clock rate,
+        // so "8000 Hz / 1 ch" was noise.
+        auto *item = new QListWidgetItem(c.mimeType.toUpper());
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(c.enabled ? Qt::Checked : Qt::Unchecked);
         item->setData(RoleMimeType, c.mimeType);

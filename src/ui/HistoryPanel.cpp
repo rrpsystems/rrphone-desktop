@@ -64,6 +64,10 @@ void HistoryPanel::reload() {
         if (record.incoming && record.answered) {
             arrow = QStringLiteral("↙");
             color = Theme::kAccentTeal;
+        } else if (record.incoming && record.note.contains(QStringLiteral("outro aparelho"))) {
+            // Handled on another device of the same extension — not missed.
+            arrow = QStringLiteral("↙");
+            color = Theme::kTextSecondary;
         } else if (record.incoming) {
             arrow = QStringLiteral("✖");
             color = Theme::kDangerRed;

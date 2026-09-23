@@ -12,5 +12,7 @@
         <file>icons/forward.svg</file>
         <file>icons/speaker.svg</file>
         <file>icons/mic.svg</file>
+        <file>icons/call.svg</file>
+        <file>icons/hangup.svg</file>
     </qresource>
 </RCC>

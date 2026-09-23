@@ -19,14 +19,15 @@ const KeyDef kKeys[4][3] = {
 
 DialPadWidget::DialPadWidget(QWidget *parent) : QWidget(parent) {
     auto *grid = new QGridLayout(this);
-    grid->setContentsMargins(6, 4, 6, 4);
-    grid->setSpacing(4);
+    grid->setContentsMargins(14, 4, 14, 4);
+    grid->setHorizontalSpacing(10);
+    grid->setVerticalSpacing(7);
 
     for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 3; ++col) {
             const KeyDef &key = kKeys[row][col];
             auto *button = new DialKeyButton(key.digit, QString::fromLatin1(key.letters), this);
-            button->setMinimumSize(62, 38);
+            button->setMinimumSize(60, 40);
             connect(button, &DialKeyButton::clicked, this, [this, button]() {
                 emit digitPressed(button->digit());
             });

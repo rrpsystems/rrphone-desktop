@@ -120,6 +120,7 @@ private:
     void announceIncomingCall(const QString &who);
     // Most recent outgoing number, for the redial gesture. Empty if none.
     QString lastDialedNumber() const;
+    void refreshIdleActionButton();
     void setAutoStartEnabled(bool enabled);
     bool isAutoStartEnabled() const;
 
@@ -140,12 +141,14 @@ private:
 
     // Hook row + call actions
     QLabel *m_hookLabel;
-    QToolButton *m_muteButton;
+    QPushButton *m_muteButton = nullptr; // built after the hook line, which reads it
     QToolButton *m_dndButton;
     QToolButton *m_forwardButton;
 
-    // Action row: hold and transfer flank the main call button. The
-    // secondary button is context-dependent (Recusar / Cancelar).
+    // Call actions: round Mudo / Espera / Transferir, then the main pill
+    // button. The secondary pill is context-dependent (Recusar / Cancelar /
+    // Alternar).
+    QWidget *m_callActions = nullptr; // the row of round buttons, shown only during a call
     QPushButton *m_holdButton;
     QPushButton *m_transferButton;
     QPushButton *m_actionButton;

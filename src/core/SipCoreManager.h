@@ -161,6 +161,10 @@ public:
     QString callForwardTarget() const { return m_callForwardTarget; }
 
     bool hasActiveCall() const { return m_activeCall != nullptr; }
+    // Why the last foreground call ended without being answered here, when it
+    // was handled on another device ("atendida em outro aparelho"). Empty
+    // otherwise. Read it from the callEnded() handler.
+    QString lastCallEndNote() const { return m_lastCallEndNote; }
     bool inAttendedTransferFlow() const { return m_consultationCall != nullptr; }
 
 signals:
@@ -239,6 +243,7 @@ private:
     QString m_engineDefaultPlaybackId;
     QString m_engineDefaultCaptureId;
     QString m_lastRemoteParty; // avoids re-emitting the same identity
+    QString m_lastCallEndNote; // see lastCallEndNote()
     QTimer *m_iterateTimer = nullptr;
     QElapsedTimer m_statsTick; // throttles the periodic media report
     DtmfMethod m_dtmfMethod = DtmfMethod::Rfc2833;

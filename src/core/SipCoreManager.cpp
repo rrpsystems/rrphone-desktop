@@ -993,7 +993,18 @@ namespace {
 // P-Asserted-Identity header. Written by hand instead of reusing
 // linphone_factory_create_address() because those headers carry trailing
 // header parameters that the address parser rejects.
-bool parseIdentityHeader(const QString &value, QString *displayNameOut, QString *numberOut) {
+//
+// A header carrying our *own* extension is rejected. The PBX here echoes the
+// caller's identity back in some responses to an outgoing INVITE ("2128"
+// <sip:2128@pbx> while 2128 is dialing 2123), and taking that as the other
+// party put the user's own extension on the display.
+//
+// The "party" parameter is deliberately NOT used to decide this: this PBX
+// labels the *callee's* identity in the 180 Ringing as party=calling too
+// ("Testes Kamailio" <sip:2128@pbx>;party=calling while 2125 dials 2128), so
+// filtering on it threw away exactly the information we were after.
+bool parseIdentityHeader(const QString &value, const QString &ownNumber, QString *displayNameOut,
+                         QString *numberOut) {
     if (value.trimmed().isEmpty()) {
         return false;
     }
@@ -1001,6 +1012,9 @@ bool parseIdentityHeader(const QString &value, QString *displayNameOut, QString 
     static const QRegularExpression userRe(QStringLiteral(R"([sS][iI][pP][sS]?:([^@>;\s]+))"));
     const QRegularExpressionMatch userMatch = userRe.match(value);
     if (!userMatch.hasMatch()) {
+        return false;
+    }
+    if (!ownNumber.isEmpty() && userMatch.captured(1) == ownNumber) {
         return false;
     }
     *numberOut = userMatch.captured(1);
@@ -1031,10 +1045,18 @@ void SipCoreManager::publishRemoteParty(LinphoneCall *call) {
     // Asterisk can be told to advertise the connected party with either
     // header; P-Asserted-Identity (RFC 3325) is the modern one, but
     // Remote-Party-ID is still what many dialplans send.
+    QString ownNumber;
+    if (m_account != nullptr) {
+        const LinphoneAccountParams *accountParams = linphone_account_get_params(m_account);
+        const LinphoneAddress *identity =
+            accountParams != nullptr ? linphone_account_params_get_identity_address(accountParams) : nullptr;
+        const char *user = identity != nullptr ? linphone_address_get_username(identity) : nullptr;
+        ownNumber = QString::fromUtf8(user != nullptr ? user : "");
+    }
     if (const LinphoneCallParams *params = linphone_call_get_remote_params(call)) {
         for (const char *header : {"P-Asserted-Identity", "Remote-Party-ID"}) {
             const char *raw = linphone_call_params_get_custom_header(params, header);
-            if (raw != nullptr && parseIdentityHeader(QString::fromUtf8(raw), &displayName, &number)) {
+            if (raw != nullptr && parseIdentityHeader(QString::fromUtf8(raw), ownNumber, &displayName, &number)) {
                 break;
             }
         }
@@ -1247,6 +1269,26 @@ void SipCoreManager::handleCallStateChanged(LinphoneCall *call, LinphoneCallStat
         [[fallthrough]];
     case LinphoneCallEnd:
     case LinphoneCallReleased:
+        if (state == LinphoneCallEnd && call == m_activeCall) {
+            // Ring groups ring every device of the extension at once; when one
+            // picks up, the PBX cancels the rest with "Reason: SIP;cause=200
+            // Call completed elsewhere". liblinphone turns that reason into
+            // the call log status, which is what tells a call answered on the
+            // mobile apart from a real missed call.
+            m_lastCallEndNote.clear();
+            if (const LinphoneCallLog *log = linphone_call_get_call_log(call)) {
+                switch (linphone_call_log_get_status(log)) {
+                case LinphoneCallAcceptedElsewhere:
+                    m_lastCallEndNote = tr("atendida em outro aparelho");
+                    break;
+                case LinphoneCallDeclinedElsewhere:
+                    m_lastCallEndNote = tr("recusada em outro aparelho");
+                    break;
+                default:
+                    break;
+                }
+            }
+        }
         if (call == m_waitingCall) {
             // The second caller gave up before being answered.
             m_waitingCall = nullptr;

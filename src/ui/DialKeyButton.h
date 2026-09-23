@@ -2,10 +2,9 @@
 
 #include <QPushButton>
 
-// A keypad key drawn like a classic desk-phone / softphone key: a large digit
-// with the small letter group inline next to it ("2ABC", "7PQRS", "0+").
-// QPushButton can't mix two font sizes in its own text, so the label is
-// painted by hand instead.
+// A keypad key drawn like the Android app's: a pill with the digit on top and
+// the small letter group underneath ("2 / ABC", "0 / +"). Painted by hand —
+// see paintEvent().
 class DialKeyButton : public QPushButton {
     Q_OBJECT
 
