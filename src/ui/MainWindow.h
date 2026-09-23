@@ -57,6 +57,11 @@ private slots:
     // Dial a number picked from the contacts or history lists.
     void startCallTo(const QString &number);
     void onConsultationConnected();
+    void onConferenceStarted();
+    void onConferenceEnded();
+    // Joins the two calls, or — already in a conference — offers to hang up
+    // on one of the parties.
+    void onConferenceClicked();
     void onErrorOccurred(const QString &message);
 
     void onKeyPressed(QChar digit);
@@ -90,8 +95,9 @@ private:
     // or blind depends only on whether the target picked up.
     // CallWaiting: talking to one person while a second call rings for a
     // decision. TwoCalls: both answered, one parked, swappable.
+    // Conference: the user plus two parties, mixed locally (three-way call).
     enum class UiCallState { Idle, Incoming, Active, CallWaiting, TwoCalls,
-                              TransferDialing, TransferConsulting, ForwardDialing };
+                              TransferDialing, TransferConsulting, ForwardDialing, Conference };
 
     QWidget *buildStatusRow();
     QWidget *buildDisplayArea();
@@ -151,6 +157,7 @@ private:
     QWidget *m_callActions = nullptr; // the row of round buttons, shown only during a call
     QPushButton *m_holdButton;
     QPushButton *m_transferButton;
+    QPushButton *m_conferenceButton;
     QPushButton *m_actionButton;
     QPushButton *m_secondaryButton;
 

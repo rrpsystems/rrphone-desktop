@@ -158,6 +158,8 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
     connect(m_sipCore, &SipCoreManager::heldCallPromoted, this, &MainWindow::onHeldCallPromoted);
     connect(m_sipCore, &SipCoreManager::callAutoHandled, this, &MainWindow::onCallAutoHandled);
     connect(m_sipCore, &SipCoreManager::consultationCallConnected, this, &MainWindow::onConsultationConnected);
+    connect(m_sipCore, &SipCoreManager::conferenceStarted, this, &MainWindow::onConferenceStarted);
+    connect(m_sipCore, &SipCoreManager::conferenceEnded, this, &MainWindow::onConferenceEnded);
     connect(m_sipCore, &SipCoreManager::errorOccurred, this, &MainWindow::onErrorOccurred);
 
     // --- Contacts wiring (D-16) ---
@@ -274,7 +276,11 @@ QWidget *MainWindow::buildDisplayArea() {
         m_logoLabel->setVisible(empty && !composing);
         m_numberEdit->setVisible(!empty || composing);
         m_backspaceButton->setVisible(!empty);
-        if (!composing) {
+        if (composing) {
+            // Picking a transfer or forward target: "Chamar"/"Ativar" needs a
+            // number, nothing more.
+            m_actionButton->setEnabled(!empty);
+        } else {
             refreshIdleActionButton();
         }
         if (empty && !composing) {
@@ -431,6 +437,11 @@ QWidget *MainWindow::buildActionRow() {
     m_transferButton = makeRoundAction(QStringLiteral(":/icons/transfer.svg"), tr("Transferir"), this);
     connect(m_transferButton, &QPushButton::clicked, this, &MainWindow::onTransferClicked);
 
+    // Only appears once there are two answered calls to join (the transfer
+    // destination picked up, or call waiting with both answered).
+    m_conferenceButton = makeRoundAction(QStringLiteral(":/icons/conference.svg"), tr("Conferência"), this);
+    connect(m_conferenceButton, &QPushButton::clicked, this, &MainWindow::onConferenceClicked);
+
     // Only shown while there is a call to act on: idle, all three would just
     // sit there disabled. The space goes to the display area instead.
     m_callActions = new QWidget(this);
@@ -442,6 +453,8 @@ QWidget *MainWindow::buildActionRow() {
     roundRow->addWidget(m_holdButton->parentWidget());
     roundRow->addStretch();
     roundRow->addWidget(m_transferButton->parentWidget());
+    roundRow->addStretch();
+    roundRow->addWidget(m_conferenceButton->parentWidget());
     roundRow->addStretch();
 
     m_actionButton = new QPushButton(tr("Ligar"), this);
@@ -756,6 +769,7 @@ void MainWindow::applyUiCallState(UiCallState state) {
     const bool dialingTransfer = (state == UiCallState::TransferDialing);
     const bool consulting = (state == UiCallState::TransferConsulting);
     const bool dialingForward = (state == UiCallState::ForwardDialing);
+    const bool conference = (state == UiCallState::Conference);
     // Whenever the user is composing a number — dialing, choosing a transfer
     // target or setting the forward target — the dialing page is reused.
     const bool composing = dialingTransfer || dialingForward;
@@ -775,11 +789,15 @@ void MainWindow::applyUiCallState(UiCallState state) {
 
     // Visible for the whole life of a conversation, transfer flow included;
     // not while it is only ringing (in or out) — nothing to mute or hold yet.
-    m_callActions->setVisible(inCall || dialingTransfer || consulting);
-    setRoundActionEnabled(m_muteButton, inCall);
+    m_callActions->setVisible(inCall || dialingTransfer || consulting || conference);
+    setRoundActionEnabled(m_muteButton, inCall || conference);
+    // Hold and transfer make no sense inside a three-way call.
     setRoundActionEnabled(m_holdButton, inCall);
     // No nested transfers: the button only starts a transfer from a call.
     setRoundActionEnabled(m_transferButton, inCall);
+    m_conferenceButton->parentWidget()->setVisible(conference || m_sipCore->canStartConference());
+    m_conferenceButton->setToolTip(conference ? tr("Desligar um dos participantes")
+                                              : tr("Juntar as duas chamadas numa conferência a três"));
     // The whole transfer flow counts as "still on a call" here. Leaving
     // dialingTransfer out used to un-hold the call the instant the transfer
     // screen opened: onTransferClicked() parks the call, then this ran and
@@ -790,7 +808,7 @@ void MainWindow::applyUiCallState(UiCallState state) {
     // The signal blockers matter independently: these buttons are being
     // synchronised to state here, not operated by the user, so they must not
     // command the engine on the way.
-    if (!inCall && !consulting && !dialingTransfer) {
+    if (!inCall && !consulting && !dialingTransfer && !conference) {
         QSignalBlocker muteBlocker(m_muteButton);
         QSignalBlocker holdBlocker(m_holdButton);
         m_muteButton->setChecked(false);
@@ -853,8 +871,9 @@ void MainWindow::applyUiCallState(UiCallState state) {
         m_actionButton->setToolTip(tr("Coloca a chamada atual em espera e atende a nova"));
         m_actionButton->setStyleSheet(actionStyle(Theme::kSuccessGreen, Theme::kSuccessGreenMuted));
         m_actionButton->setEnabled(true);
-    } else if (inCall) {
+    } else if (inCall || conference) {
         m_actionButton->setText(tr("Desligar"));
+        m_actionButton->setToolTip(conference ? tr("Encerra a conferência para os dois") : QString());
         m_actionButton->setStyleSheet(actionStyle(Theme::kDangerRed, Theme::kDangerRed));
         m_actionButton->setEnabled(true);
     } else if (dialingTransfer) {
@@ -878,10 +897,10 @@ void MainWindow::applyUiCallState(UiCallState state) {
 
     // Phone handset on every green action, hung-up handset on the red one —
     // the same icons as the Android buttons.
-    m_actionButton->setIcon(QIcon(inCall && !waiting ? QStringLiteral(":/icons/hangup.svg")
+    m_actionButton->setIcon(QIcon((inCall && !waiting) || conference ? QStringLiteral(":/icons/hangup.svg")
                                                      : QStringLiteral(":/icons/call.svg")));
 
-    if (inCall || consulting) {
+    if (inCall || consulting || conference) {
         // The clock is NOT started here: while the phone is still ringing on
         // the other end there is no call duration yet. It starts when
         // SipCoreManager reports the call answered (onCallConnected), so a
@@ -1184,7 +1203,44 @@ void MainWindow::onCallEnded() {
 void MainWindow::onConsultationConnected() {
     // The hook line is what tells the user the destination picked up and
     // that completing the transfer will now hand over a live conversation.
-    setHookText(tr("Falando com o destino — toque em Transferir para concluir"));
+    setHookText(tr("Falando com o destino — Transferir conclui, Conferência junta os três"));
+    // The conference button only exists once the destination answered.
+    applyUiCallState(m_uiCallState);
+}
+
+void MainWindow::onConferenceClicked() {
+    if (!m_sipCore->inConference()) {
+        m_sipCore->startConference();
+        return;
+    }
+    // In a conference: pick someone to hang up on. The other stays on the line.
+    const QStringList parties = m_sipCore->conferenceParticipants();
+    QMenu menu(this);
+    for (int i = 0; i < parties.size(); ++i) {
+        QAction *action = menu.addAction(tr("Desligar %1").arg(parties.at(i)));
+        connect(action, &QAction::triggered, this, [this, i]() { m_sipCore->dropConferenceParticipant(i); });
+    }
+    menu.exec(m_conferenceButton->mapToGlobal(QPoint(0, m_conferenceButton->height())));
+}
+
+void MainWindow::onConferenceStarted() {
+    m_heldPeer.clear();
+    {
+        // The call parked for the transfer is back in the mix; the hold button
+        // must not keep showing it as held (nor command the engine on the way).
+        QSignalBlocker blocker(m_holdButton);
+        m_holdButton->setChecked(false);
+    }
+    m_callPeerLabel->setText(tr("Conferência\n%1").arg(m_sipCore->conferenceParticipants().join(QStringLiteral(" · "))));
+    setHookText(tr("Em conferência"));
+    applyUiCallState(UiCallState::Conference);
+}
+
+void MainWindow::onConferenceEnded() {
+    // One party left: back to a plain call with the other. Who it is arrives
+    // right after, through onRemotePartyChanged().
+    setHookText(tr("Em chamada"));
+    applyUiCallState(UiCallState::Active);
 }
 
 void MainWindow::startCallTo(const QString &number) {
@@ -1321,7 +1377,8 @@ void MainWindow::onErrorOccurred(const QString &message) {
 // --- User actions ---------------------------------------------------------
 
 void MainWindow::onKeyPressed(QChar digit) {
-    if (m_uiCallState == UiCallState::Active || m_uiCallState == UiCallState::TransferConsulting) {
+    if (m_uiCallState == UiCallState::Active || m_uiCallState == UiCallState::TransferConsulting ||
+        m_uiCallState == UiCallState::Conference) {
         // D-05: during a call the keypad sends DTMF instead of composing a
         // new number.
         m_sipCore->sendDtmf(digit.toLatin1());
@@ -1339,6 +1396,11 @@ void MainWindow::onActionButtonClicked() {
         m_sipCore->answer();
         setHookText(tr("Em chamada"));
         applyUiCallState(UiCallState::Active);
+        break;
+
+    case UiCallState::Conference:
+        // Local conference: leaving it ends it for both parties.
+        m_sipCore->hangup();
         break;
 
     case UiCallState::Active:

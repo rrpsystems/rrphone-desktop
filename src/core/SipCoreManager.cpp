@@ -457,17 +457,19 @@ void SipCoreManager::applyAccountConfig(const AccountConfig &config) {
     // confusing "403 Forbidden". Five minutes also keeps the NAT binding warm.
     linphone_account_params_set_expires(params, 300);
 
-    // Outbound proxy as a route set, not linphone_account_params_enable_outbound_proxy():
-    // that one means "the registrar *is* the proxy", while here the proxy is a
-    // separate hop (the push gateway) in front of the PBX.
+    // With an outbound proxy (e.g. the Flexisip push gateway) the proxy becomes
+    // the account's server address and the only route. liblinphone always
+    // sends REGISTER to the server address and ignores the route set there
+    // (Account::registerAccount), so a route set alone let registration go
+    // straight to the PBX. The identity keeps the extension's own domain, and
+    // the proxy relays to the PBX.
     const QString proxyUri = normalizeProxyUri(config.outboundProxy);
     if (!proxyUri.isEmpty()) {
-        LinphoneAddress *route = linphone_factory_create_address(factory, proxyUri.toUtf8().constData());
-        if (route != nullptr) {
-            bctbx_list_t *routes = bctbx_list_append(nullptr, route);
-            linphone_account_params_set_routes_addresses(params, routes);
-            bctbx_list_free(routes);
-            linphone_address_unref(route);
+        LinphoneAddress *proxy = linphone_factory_create_address(factory, proxyUri.toUtf8().constData());
+        if (proxy != nullptr) {
+            linphone_account_params_set_server_address(params, proxy);
+            linphone_account_params_enable_outbound_proxy(params, TRUE);
+            linphone_address_unref(proxy);
             qInfo().noquote() << "[sip] proxy de saída:" << proxyUri;
         } else {
             emit errorOccurred(tr("Proxy de saída inválido: %1").arg(config.outboundProxy));
@@ -556,7 +558,19 @@ void SipCoreManager::answer() {
 
 void SipCoreManager::hangup() {
     qInfo().noquote() << "[sip] desligar solicitado | principal:" << (m_activeCall != nullptr ? "sim" : "nao")
-                      << "| consulta:" << (m_consultationCall != nullptr ? "sim" : "nao");
+                      << "| consulta:" << (m_consultationCall != nullptr ? "sim" : "nao")
+                      << "| conferência:" << (m_conference != nullptr ? "sim" : "nao");
+    if (m_conference != nullptr) {
+        // Leaving a local conference ends it for everyone: the audio is mixed
+        // here. Both parties get a BYE rather than being left paused.
+        if (m_heldCall) {
+            linphone_call_terminate(m_heldCall);
+        }
+        if (m_activeCall) {
+            linphone_call_terminate(m_activeCall);
+        }
+        return;
+    }
     if (m_consultationCall) {
         linphone_call_terminate(m_consultationCall);
     }
@@ -569,6 +583,10 @@ void SipCoreManager::setMuted(bool muted) {
     if (m_core) {
         // liblinphone mutes at the core/mic level, not per LinphoneCall.
         linphone_core_enable_mic(m_core, muted ? FALSE : TRUE);
+        if (m_conference != nullptr) {
+            // The conference mixer has its own microphone switch.
+            linphone_conference_set_microphone_muted(m_conference, muted ? TRUE : FALSE);
+        }
     }
 }
 
@@ -749,6 +767,80 @@ int SipCoreManager::micVolume() const {
         return kUnityVolumePercent;
     }
     return gainDbToPercent(linphone_core_get_mic_gain_db(m_core));
+}
+
+// --- Three-way conference ---------------------------------------------------
+
+bool SipCoreManager::canStartConference() const {
+    if (m_core == nullptr || m_conference != nullptr || m_activeCall == nullptr || m_waitingCall != nullptr) {
+        return false;
+    }
+    return (m_consultationCall != nullptr && m_consultationAnswered) || m_heldCall != nullptr;
+}
+
+void SipCoreManager::startConference() {
+    if (!canStartConference()) {
+        return;
+    }
+    LinphoneCall *other = m_consultationCall != nullptr ? m_consultationCall : m_heldCall;
+
+    // No conference factory address: liblinphone creates a local conference and
+    // mixes the audio on this machine, with the user as a participant.
+    LinphoneConferenceParams *params = linphone_core_create_conference_params_2(m_core, nullptr);
+    linphone_conference_params_enable_audio(params, TRUE);
+    linphone_conference_params_enable_video(params, FALSE);
+    linphone_conference_params_enable_chat(params, FALSE);
+    linphone_conference_params_enable_local_participant(params, TRUE);
+    linphone_conference_params_set_subject_utf8(params, "Conferência");
+    m_conference = linphone_core_create_conference_with_params(m_core, params);
+    linphone_conference_params_unref(params);
+    if (m_conference == nullptr) {
+        emit errorOccurred(tr("Não foi possível iniciar a conferência."));
+        return;
+    }
+
+    linphone_conference_add_participant(m_conference, m_activeCall);
+    linphone_conference_add_participant(m_conference, other);
+
+    // From here on the two calls are the conference: no consultation, no
+    // parked call, nothing to transfer.
+    m_heldCall = other;
+    m_consultationCall = nullptr;
+    m_consultationAnswered = false;
+    m_transferTarget.clear();
+    qInfo().noquote() << "[sip] conferência iniciada:" << callLabel(m_activeCall) << "+" << callLabel(m_heldCall);
+    emit conferenceStarted();
+}
+
+QStringList SipCoreManager::conferenceParticipants() const {
+    QStringList names;
+    if (m_conference != nullptr) {
+        names << callLabel(m_activeCall) << callLabel(m_heldCall);
+    }
+    return names;
+}
+
+void SipCoreManager::dropConferenceParticipant(int index) {
+    if (m_conference == nullptr) {
+        return;
+    }
+    LinphoneCall *call = index == 0 ? m_activeCall : m_heldCall;
+    if (call != nullptr) {
+        qInfo().noquote() << "[sip] conferência: desligando" << callLabel(call);
+        linphone_call_terminate(call);
+    }
+}
+
+QString SipCoreManager::callLabel(const LinphoneCall *call) {
+    if (call == nullptr) {
+        return {};
+    }
+    const LinphoneAddress *remote = linphone_call_get_remote_address(call);
+    const char *name = remote != nullptr ? linphone_address_get_display_name(remote) : nullptr;
+    const char *user = remote != nullptr ? linphone_address_get_username(remote) : nullptr;
+    const QString number = QString::fromUtf8(user != nullptr ? user : "");
+    const QString display = QString::fromUtf8(name != nullptr ? name : "");
+    return display.isEmpty() ? number : QStringLiteral("%1 (%2)").arg(display, number);
 }
 
 void SipCoreManager::beginAttendedTransfer(const QString &target) {
@@ -1302,6 +1394,23 @@ void SipCoreManager::handleCallStateChanged(LinphoneCall *call, LinphoneCallStat
         [[fallthrough]];
     case LinphoneCallEnd:
     case LinphoneCallReleased:
+        if (m_conference != nullptr && (call == m_activeCall || call == m_heldCall)) {
+            // One party of the three-way conference left. liblinphone already
+            // turns the other back into a plain call; follow it here.
+            LinphoneCall *remaining = call == m_activeCall ? m_heldCall : m_activeCall;
+            m_conference = nullptr; // owned by the core, which tears it down
+            m_activeCall = remaining;
+            m_heldCall = nullptr;
+            m_lastRemoteParty.clear();
+            qInfo().noquote() << "[sip] conferência encerrada; segue a chamada com" << callLabel(remaining);
+            if (remaining != nullptr) {
+                emit conferenceEnded();
+                publishRemoteParty(remaining);
+            } else {
+                emit callEnded();
+            }
+            break;
+        }
         if (state == LinphoneCallEnd && call == m_activeCall) {
             // Ring groups ring every device of the extension at once; when one
             // picks up, the PBX cancels the rest with "Reason: SIP;cause=200

@@ -14,5 +14,6 @@
         <file>icons/mic.svg</file>
         <file>icons/call.svg</file>
         <file>icons/hangup.svg</file>
+        <file>icons/conference.svg</file>
     </qresource>
 </RCC>

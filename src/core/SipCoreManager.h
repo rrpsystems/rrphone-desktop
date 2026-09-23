@@ -134,6 +134,20 @@ public:
     bool hasWaitingCall() const { return m_waitingCall != nullptr; }
     bool hasHeldCall() const { return m_heldCall != nullptr; }
 
+    // Three-way conference, mixed locally on this PC: the user plus the two
+    // calls that already exist — the consultation leg of a transfer once it is
+    // answered, or the two answered calls of call waiting. No conference server
+    // involved. If one party leaves, liblinphone turns the other back into a
+    // plain call; hanging up ends both.
+    bool canStartConference() const;
+    void startConference();
+    bool inConference() const { return m_conference != nullptr; }
+    // Display names of the two parties, in a stable order (0 and 1).
+    QStringList conferenceParticipants() const;
+    // Hangs up on one party; the conference collapses into a normal call with
+    // the other.
+    void dropConferenceParticipant(int index);
+
     void beginAttendedTransfer(const QString &target);
     void completeAttendedTransfer();
     void cancelAttendedTransfer();
@@ -199,6 +213,11 @@ signals:
     void heldCallEnded();
     // The foreground call ended and the parked one was brought back.
     void heldCallPromoted();
+    // The two calls are now one three-way conference.
+    void conferenceStarted();
+    // One party left; the other is a normal call again (remotePartyChanged
+    // follows with who it is).
+    void conferenceEnded();
     // An incoming call that never reached the user because DND or forwarding
     // handled it. Emitted so it still shows up in the history — otherwise
     // those calls vanish without a trace.
@@ -219,6 +238,7 @@ private:
     // remotePartyChanged when it differs from what was last reported.
     void publishRemoteParty(LinphoneCall *call);
     void promoteHeldCall();
+    static QString callLabel(const LinphoneCall *call);
     // Emits a progress label only when it refers to the call in the foreground.
     void emitForegroundLabel(const LinphoneCall *call, const QString &label);
     void handleGlobalStateChanged(LinphoneGlobalState state, const char *message);
@@ -241,6 +261,9 @@ private:
     LinphoneCall *m_consultationCall = nullptr; // call C, only during a transfer (D-06)
     LinphoneCall *m_heldCall = nullptr;         // parked call, during call waiting
     LinphoneCall *m_waitingCall = nullptr;      // ringing second call, not yet answered
+    // Local three-way conference. Owned by the core; m_activeCall and
+    // m_heldCall are its two parties while it exists.
+    LinphoneConference *m_conference = nullptr;
     QString m_transferTarget;                   // kept for the blind-transfer fallback
     bool m_consultationAnswered = false;
     bool m_doNotDisturb = false;
