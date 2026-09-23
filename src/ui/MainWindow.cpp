@@ -1594,6 +1594,7 @@ void MainWindow::applyProfile(const AccountProfile &profile) {
     accountConfig.password = profile.password;
     accountConfig.domain = profile.domain;
     accountConfig.transport = profile.transport;
+    accountConfig.outboundProxy = profile.outboundProxy;
 
     m_extension = profile.username;
     m_sipCore->configureAccount(accountConfig);

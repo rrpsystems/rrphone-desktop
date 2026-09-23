@@ -20,6 +20,10 @@ struct AccountProfile {
     QString transport;       // "udp" | "tcp" | "tls"
     QString dtmfMethod;      // "rfc2833" | "info" | "inband" — mirrors SipCoreManager::DtmfMethod
     QString contactsUrl;     // D-16, optional
+    // Outbound proxy (push gateway). Empty = register straight on `domain`,
+    // which is the desktop default; the Android app defaults to the RRP
+    // Flexisip when a profile doesn't say otherwise.
+    QString outboundProxy;
     QList<CodecInfo> codecs; // D-14, in priority order; empty = "use engine defaults"
 };
 

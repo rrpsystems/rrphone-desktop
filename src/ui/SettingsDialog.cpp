@@ -67,12 +67,23 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     m_domainEdit->setAccessibleName(tr("Servidor SIP"));
     m_transportCombo->setAccessibleName(tr("Transporte"));
 
+    // Only needed behind a push gateway (Flexisip). Left empty on the desktop:
+    // a PC stays connected and has nothing to be woken up for.
+    m_outboundProxyEdit = new QLineEdit(this);
+    m_outboundProxyEdit->setPlaceholderText(tr("vazio = direto no servidor"));
+    m_outboundProxyEdit->setAccessibleName(tr("Proxy de saída"));
+    m_outboundProxyEdit->setToolTip(
+        tr("Servidor por onde passam o registro e as chamadas antes de chegar ao PBX,\n"
+           "por exemplo o gateway de push. Sem porta/transporte, usa TLS (5061).\n"
+           "Deixe em branco para registrar direto no servidor SIP."));
+
     auto *accountForm = new QFormLayout();
     accountForm->addRow(tr("Nome de exibição"), m_displayNameEdit);
     accountForm->addRow(tr("Usuário/Ramal"), m_usernameEdit);
     accountForm->addRow(tr("Senha"), m_passwordEdit);
     accountForm->addRow(tr("Servidor SIP"), m_domainEdit);
     accountForm->addRow(tr("Transporte"), m_transportCombo);
+    accountForm->addRow(tr("Proxy de saída"), m_outboundProxyEdit);
 
     // --- Audio tab (D-14 codecs, D-15 DTMF) ---------------------------------
     m_codecList = new QListWidget(this);
@@ -322,6 +333,7 @@ void SettingsDialog::setProfile(const AccountProfile &profile) {
     m_domainEdit->setText(profile.domain);
     const int transportIndex = m_transportCombo->findText(profile.transport.toUpper());
     m_transportCombo->setCurrentIndex(transportIndex >= 0 ? transportIndex : 0);
+    m_outboundProxyEdit->setText(profile.outboundProxy);
     const int dtmfIndex = m_dtmfCombo->findData(profile.dtmfMethod);
     m_dtmfCombo->setCurrentIndex(dtmfIndex >= 0 ? dtmfIndex : 0);
     m_contactsUrlEdit->setText(profile.contactsUrl);
@@ -338,6 +350,7 @@ AccountProfile SettingsDialog::currentProfile() const {
     profile.password = m_passwordEdit->text();
     profile.domain = m_domainEdit->text();
     profile.transport = m_transportCombo->currentText();
+    profile.outboundProxy = m_outboundProxyEdit->text().trimmed();
     profile.dtmfMethod = m_dtmfCombo->currentData().toString();
     profile.contactsUrl = m_contactsUrlEdit->text();
 

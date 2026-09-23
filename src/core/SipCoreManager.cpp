@@ -457,6 +457,23 @@ void SipCoreManager::applyAccountConfig(const AccountConfig &config) {
     // confusing "403 Forbidden". Five minutes also keeps the NAT binding warm.
     linphone_account_params_set_expires(params, 300);
 
+    // Outbound proxy as a route set, not linphone_account_params_enable_outbound_proxy():
+    // that one means "the registrar *is* the proxy", while here the proxy is a
+    // separate hop (the push gateway) in front of the PBX.
+    const QString proxyUri = normalizeProxyUri(config.outboundProxy);
+    if (!proxyUri.isEmpty()) {
+        LinphoneAddress *route = linphone_factory_create_address(factory, proxyUri.toUtf8().constData());
+        if (route != nullptr) {
+            bctbx_list_t *routes = bctbx_list_append(nullptr, route);
+            linphone_account_params_set_routes_addresses(params, routes);
+            bctbx_list_free(routes);
+            linphone_address_unref(route);
+            qInfo().noquote() << "[sip] proxy de saída:" << proxyUri;
+        } else {
+            emit errorOccurred(tr("Proxy de saída inválido: %1").arg(config.outboundProxy));
+        }
+    }
+
     m_account = linphone_core_create_account(m_core, params);
     const LinphoneStatus addStatus = linphone_core_add_account(m_core, m_account);
     linphone_core_set_default_account(m_core, m_account);
@@ -479,6 +496,22 @@ void SipCoreManager::applyAccountConfig(const AccountConfig &config) {
     linphone_address_unref(serverAddr);
     // m_account keeps the ref handed back by linphone_core_create_account;
     // released in clearAccount()/destructor.
+}
+
+QString SipCoreManager::normalizeProxyUri(const QString &proxy) {
+    QString uri = proxy.trimmed();
+    if (uri.isEmpty()) {
+        return uri;
+    }
+    if (!uri.startsWith(QLatin1String("sip:"), Qt::CaseInsensitive) &&
+        !uri.startsWith(QLatin1String("sips:"), Qt::CaseInsensitive)) {
+        uri.prepend(QStringLiteral("sip:"));
+    }
+    if (!uri.contains(QLatin1String("transport="), Qt::CaseInsensitive) &&
+        !uri.startsWith(QLatin1String("sips:"), Qt::CaseInsensitive)) {
+        uri.append(QStringLiteral(";transport=tls"));
+    }
+    return uri;
 }
 
 void SipCoreManager::clearAccount() {

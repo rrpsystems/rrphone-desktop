@@ -9,6 +9,7 @@ constexpr auto kKeyDisplayName = "account/displayName";
 constexpr auto kKeyUsername = "account/username";
 constexpr auto kKeyDomain = "account/domain";
 constexpr auto kKeyTransport = "account/transport";
+constexpr auto kKeyOutboundProxy = "account/outboundProxy";
 constexpr auto kKeyDtmfMethod = "account/dtmfMethod";
 constexpr auto kKeyContactsUrl = "contacts/url";
 constexpr auto kKeySpeakerVolume = "audio/speakerVolume";
@@ -22,6 +23,7 @@ void SettingsStore::saveProfile(const AccountProfile &profile) {
     settings.setValue(kKeyUsername, profile.username);
     settings.setValue(kKeyDomain, profile.domain);
     settings.setValue(kKeyTransport, profile.transport);
+    settings.setValue(kKeyOutboundProxy, profile.outboundProxy);
     settings.setValue(kKeyDtmfMethod, profile.dtmfMethod);
     settings.setValue(kKeyContactsUrl, profile.contactsUrl);
 
@@ -57,6 +59,7 @@ bool SettingsStore::loadProfile(AccountProfile *profileOut) {
     profile.username = username;
     profile.domain = domain;
     profile.transport = settings.value(kKeyTransport, QStringLiteral("UDP")).toString();
+    profile.outboundProxy = settings.value(kKeyOutboundProxy).toString();
     profile.dtmfMethod = settings.value(kKeyDtmfMethod, QStringLiteral("rfc2833")).toString();
     profile.contactsUrl = settings.value(kKeyContactsUrl).toString();
 

@@ -82,6 +82,7 @@ private:
     QLineEdit *m_passwordEdit;
     QLineEdit *m_domainEdit;
     QComboBox *m_transportCombo;
+    QLineEdit *m_outboundProxyEdit;
     QComboBox *m_dtmfCombo;
     QLineEdit *m_contactsUrlEdit;
 

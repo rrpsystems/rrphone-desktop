@@ -27,7 +27,16 @@ public:
         QString password;
         QString domain;     // SIP server, e.g. "sip.example.com" or "sip.example.com:5061"
         QString transport;  // "udp" | "tcp" | "tls"
+        // Optional outbound proxy (e.g. the Flexisip push gateway). Every
+        // request — REGISTER included — is routed through it, while still
+        // addressed to `domain`. Empty = straight to the SIP server.
+        QString outboundProxy;
     };
+
+    // "push.exemplo.com" -> "sip:push.exemplo.com;transport=tls". A full
+    // sip:/sips: URI is kept as typed. TLS is the default because that is
+    // what a push gateway on the internet is expected to speak.
+    static QString normalizeProxyUri(const QString &proxy);
 
     enum class DtmfMethod { Rfc2833, SipInfo, InBand };
 

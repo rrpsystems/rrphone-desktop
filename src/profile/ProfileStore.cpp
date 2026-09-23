@@ -100,6 +100,12 @@ bool ProfileStore::exportProfile(const AccountProfile &profile,
     account["transport"] = profile.transport;
     account["dtmfMethod"] = profile.dtmfMethod;
     account["contactsUrl"] = profile.contactsUrl;
+    // Only written when set. A missing key lets the Android app fall back to
+    // its push gateway, so a profile exported from a PC (where there is no
+    // proxy) doesn't silently switch push off on the phone that imports it.
+    if (!profile.outboundProxy.isEmpty()) {
+        account["outboundProxy"] = profile.outboundProxy;
+    }
     account["codecs"] = codecsToJson(profile.codecs);
 
     ProfileCipher::SealedBox box;
@@ -187,6 +193,11 @@ bool ProfileStore::importProfile(const QString &filePath,
     profile.transport = account.value("transport").toString();
     profile.dtmfMethod = account.value("dtmfMethod").toString();
     profile.contactsUrl = account.value("contactsUrl").toString();
+    // A profile from the Android app says whether the phone uses the RRP push
+    // gateway. That gateway only exists to wake a sleeping phone, so a PC
+    // importing such a profile registers directly; a proxy is kept only when
+    // the phone itself was set to a plain proxy with push off.
+    profile.outboundProxy = account.value("push").toBool() ? QString() : account.value("outboundProxy").toString();
     profile.codecs = codecsFromJson(account.value("codecs").toArray());
 
     if (root.value("version").toInt() >= 3) {
