@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RRP Softphone — Política de Privacidade</title>
+<meta name="description" content="Política de privacidade do RRP Softphone para Android e Windows.">
+<link rel="icon" href="assets/favicon.ico">
+<style>
+  :root {
+    --bg: #14181D;
+    --panel: #1C2128;
+    --border: #2B333D;
+    --text-primary: #E8ECEF;
+    --text-secondary: #8B96A3;
+    --blue: #2E9FDB;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  a { color: var(--blue); }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 24px 64px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+  header img { width: 48px; height: 48px; }
+  h1 { font-size: 26px; margin: 0; }
+  .updated { color: var(--text-secondary); font-size: 14px; margin: 4px 0 0; }
+  h2 { font-size: 18px; margin: 36px 0 10px; }
+  p, li { color: var(--text-primary); }
+  .muted { color: var(--text-secondary); }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 12px 0;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+  footer { margin-top: 48px; color: var(--text-secondary); font-size: 14px; }
+  @media (max-width: 560px) {
+    table, thead, tbody, tr, th, td { display: block; }
+    thead { display: none; }
+    td { border: none; padding: 4px 0; }
+    tr { border-bottom: 1px solid var(--border); padding: 10px 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="assets/rrp_logo.png" alt="">
+    <div>
+      <h1>Política de Privacidade</h1>
+      <p class="updated">RRP Softphone (Android e Windows) · atualizada em 23/09/2026</p>
+    </div>
+  </header>
+
+  <p>
+    O RRP Softphone é um aplicativo de telefonia (softphone SIP) desenvolvido pela
+    <strong>RRP Systems Ltda.</strong>, CNPJ 39.539.153/0001-47. Esta política explica
+    quais dados o aplicativo usa, para quê, e com quem eles são compartilhados, nos
+    termos da Lei Geral de Proteção de Dados (Lei 13.709/2018).
+  </p>
+
+  <div class="card">
+    <strong>Em resumo:</strong> o aplicativo não tem anúncios, não coleta dados para
+    análise ou marketing e não vende nem cede dados a terceiros. O que ele guarda fica
+    no seu aparelho; o que ele envia é só o necessário para fazer e receber ligações.
+  </div>
+
+  <h2>Dados que ficam no seu aparelho</h2>
+  <ul>
+    <li><strong>Conta SIP</strong> (servidor, ramal, nome de exibição e senha). A senha
+      é guardada cifrada pelo sistema do aparelho (Android Keystore / Gerenciador de
+      Credenciais do Windows) e não sai do aparelho, exceto para autenticar no servidor
+      SIP que você configurou.</li>
+    <li><strong>Histórico de chamadas</strong> e <strong>contatos criados no app</strong>.</li>
+    <li><strong>Agenda baixada</strong> da URL de contatos configurada, quando houver.</li>
+    <li><strong>Preferências</strong> (áudio, codecs, não perturbe, siga-me).</li>
+  </ul>
+  <p class="muted">Esses dados não são copiados para backup em nuvem pelo aplicativo e
+    são apagados ao desinstalá-lo ou ao usar “Sair da conta”.</p>
+
+  <h2>Dados enviados, e para quem</h2>
+  <table>
+    <thead><tr><th>Dado</th><th>Para quem</th><th>Para quê</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Ramal, credenciais de autenticação e sinalização das chamadas (números discados e recebidos)</td>
+        <td>O servidor de telefonia (PBX) configurado na conta</td>
+        <td>Registrar o ramal e completar as ligações</td>
+      </tr>
+      <tr>
+        <td>Áudio das chamadas</td>
+        <td>O servidor de telefonia e a outra pessoa na ligação</td>
+        <td>A própria conversa. O microfone só é usado durante uma chamada, e o aplicativo não grava as ligações.</td>
+      </tr>
+      <tr>
+        <td>Identificador de notificação do aparelho (token do Firebase Cloud Messaging) e registro SIP</td>
+        <td>Servidor de push da RRP Systems (push.rrpsystems.com.br) e Google Firebase Cloud Messaging</td>
+        <td>Somente no Android, com “Receber chamadas com o app fechado” ligado: avisar o aparelho de que há uma chamada chegando</td>
+      </tr>
+      <tr>
+        <td>Requisição à URL de contatos</td>
+        <td>O servidor indicado nessa URL</td>
+        <td>Baixar a agenda, quando essa opção está configurada</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="muted">O servidor de telefonia normalmente é operado pela empresa que forneceu o
+    seu ramal, que é a responsável pelo tratamento dos dados de chamadas nele (por
+    exemplo, registros de ligações). O serviço do Google está sujeito à
+    <a href="https://policies.google.com/privacy">política de privacidade do Google</a>.</p>
+
+  <h2>Permissões do Android</h2>
+  <ul>
+    <li><strong>Microfone</strong>: falar durante as chamadas.</li>
+    <li><strong>Notificações</strong> e <strong>tela cheia</strong>: avisar e exibir uma chamada recebida, inclusive com o aparelho bloqueado.</li>
+    <li><strong>Gerenciar chamadas próprias</strong> e <strong>serviço em primeiro plano</strong>: integrar a ligação ao sistema (Bluetooth, tela de bloqueio) e mantê-la ativa enquanto dura.</li>
+    <li><strong>Internet</strong>: comunicação com os servidores acima.</li>
+  </ul>
+
+  <h2>Seus direitos</h2>
+  <p>
+    Você pode apagar todos os dados locais a qualquer momento, pelo “Sair da conta” ou
+    desinstalando o aplicativo. Para dúvidas, ou para exercer os direitos previstos na
+    LGPD sobre dados tratados pela RRP Systems (como os do servidor de push), escreva para
+    <a href="mailto:contato@rrpsystems.com.br">contato@rrpsystems.com.br</a>.
+  </p>
+
+  <h2>Crianças</h2>
+  <p>O aplicativo é destinado a uso profissional e não é direcionado a menores de 13 anos.</p>
+
+  <h2>Alterações</h2>
+  <p>Mudanças nesta política são publicadas nesta página, com a data de atualização no topo.</p>
+
+  <footer>
+    RRP Systems Ltda. · CNPJ 39.539.153/0001-47 ·
+    <a href="mailto:contato@rrpsystems.com.br">contato@rrpsystems.com.br</a> ·
+    <a href="index.html">RRP Softphone</a>
+  </footer>
+</div>
+</body>
+</html>
