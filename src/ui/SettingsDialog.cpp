@@ -55,7 +55,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     m_passwordEdit = new QLineEdit(this);
     m_passwordEdit->setEchoMode(QLineEdit::Password);
     m_domainEdit = new QLineEdit(this);
-    m_domainEdit->setPlaceholderText(tr("sip.exemplo.com[:porta]"));
+    m_domainEdit->setPlaceholderText(tr("sip.exemplo.com[:porta] — sem porta: 5090"));
+    m_domainEdit->setToolTip(tr("Sem porta, usa 5090 (TLS: 5091)."));
     m_transportCombo = new QComboBox(this);
     m_transportCombo->addItems({"UDP", "TCP", "TLS"});
 

@@ -37,6 +37,9 @@ public:
     // sip:/sips: URI is kept as typed. TLS is the default because that is
     // what a push gateway on the internet is expected to speak.
     static QString normalizeProxyUri(const QString &proxy);
+    // Server with an explicit port. Without one, the RRP PBX default applies —
+    // 5090 (UDP/TCP) or 5091 (TLS) — instead of SIP's 5060/5061. Same as Android.
+    static QString sipServerHostPort(const QString &domain, const QString &transport);
 
     enum class DtmfMethod { Rfc2833, SipInfo, InBand };
 

@@ -442,7 +442,8 @@ void SipCoreManager::applyAccountConfig(const AccountConfig &config) {
     }
 
     const QString serverUri = QStringLiteral("sip:%1;transport=%2")
-                                   .arg(config.domain, config.transport.toLower());
+                                   .arg(sipServerHostPort(config.domain, config.transport),
+                                        config.transport.toLower());
     LinphoneAddress *serverAddr = linphone_factory_create_address(factory, serverUri.toUtf8().constData());
 
     LinphoneAccountParams *params = linphone_core_create_account_params(m_core);
@@ -498,6 +499,16 @@ void SipCoreManager::applyAccountConfig(const AccountConfig &config) {
     linphone_address_unref(serverAddr);
     // m_account keeps the ref handed back by linphone_core_create_account;
     // released in clearAccount()/destructor.
+}
+
+QString SipCoreManager::sipServerHostPort(const QString &domain, const QString &transport) {
+    const QString host = domain.trimmed();
+    static const QRegularExpression hasPort(QStringLiteral(R"(:\d+$)"));
+    if (host.isEmpty() || hasPort.match(host).hasMatch()) {
+        return host;
+    }
+    const bool tls = transport.compare(QLatin1String("tls"), Qt::CaseInsensitive) == 0;
+    return host + (tls ? QStringLiteral(":5091") : QStringLiteral(":5090"));
 }
 
 QString SipCoreManager::normalizeProxyUri(const QString &proxy) {

@@ -58,7 +58,7 @@ bool SettingsStore::loadProfile(AccountProfile *profileOut) {
     profile.displayName = settings.value(kKeyDisplayName).toString();
     profile.username = username;
     profile.domain = domain;
-    profile.transport = settings.value(kKeyTransport, QStringLiteral("UDP")).toString();
+    profile.transport = settings.value(kKeyTransport, QStringLiteral("TCP")).toString();
     profile.outboundProxy = settings.value(kKeyOutboundProxy).toString();
     profile.dtmfMethod = settings.value(kKeyDtmfMethod, QStringLiteral("rfc2833")).toString();
     profile.contactsUrl = settings.value(kKeyContactsUrl).toString();

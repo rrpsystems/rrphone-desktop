@@ -191,6 +191,9 @@ bool ProfileStore::importProfile(const QString &filePath,
     profile.username = account.value("username").toString();
     profile.domain = account.value("domain").toString();
     profile.transport = account.value("transport").toString();
+    if (profile.transport.isEmpty()) {
+        profile.transport = QStringLiteral("TCP");
+    }
     profile.dtmfMethod = account.value("dtmfMethod").toString();
     profile.contactsUrl = account.value("contactsUrl").toString();
     // A profile from the Android app says whether the phone uses the RRP push
