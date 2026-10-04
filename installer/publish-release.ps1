@@ -1,4 +1,4 @@
-# Publica uma release no GitHub a partir do instalador já compilado.
+﻿# Publica uma release no GitHub a partir do instalador já compilado.
 #
 #     .\installer\publish-release.ps1
 #
@@ -73,8 +73,17 @@ Distribuído sob a GNU GPL v3. O código-fonte correspondente a este binário é
 esta tag: $tag
 "@
 
-gh release create $tag $asset --repo $repo --title "RRP Softphone $version" --notes $notes
+# Notas por arquivo: passadas como argumento, o Windows PowerShell 5.1 quebra
+# o texto nas aspas internas e o gh recebe pedaços como nomes de arquivo.
+$notesFile = Join-Path $staging 'notes.md'
+[IO.File]::WriteAllText($notesFile, $notes, (New-Object Text.UTF8Encoding $false))
+
+gh release create $tag $asset --repo $repo --title "RRP Softphone $version" --notes-file $notesFile
+$ghExit = $LASTEXITCODE
 Remove-Item $staging -Recurse -Force
+if ($ghExit -ne 0) {
+    throw "gh release create falhou (código $ghExit); nada foi publicado."
+}
 
 Write-Host "`nPublicado: https://github.com/$repo/releases/tag/$tag" -ForegroundColor Green
 Write-Host "Download:  https://github.com/$repo/releases/latest/download/RRPSoftphone-setup.exe" -ForegroundColor Green
