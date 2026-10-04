@@ -105,8 +105,10 @@ void SipCoreManager::start() {
     linphone_core_cbs_unref(cbs); // core now owns a ref via add_callbacks
 
     // Identifies us in the SIP User-Agent header — otherwise the PBX shows
-    // the extension as an unknown device.
-    linphone_core_set_user_agent(m_core, RRP_APP_NAME, RRP_APP_VERSION);
+    // the extension as an unknown device. A product token cannot contain
+    // spaces (RFC 3261), so not RRP_APP_NAME; same pattern as the Android
+    // app's "RRPSoftphone-Android/<versão>".
+    linphone_core_set_user_agent(m_core, "RRPSoftphone-Windows", RRP_APP_VERSION);
 
     // This is a softphone, not a messenger: chat, presence subscriptions and
     // conference event packages are all unused here. Left on, they make the
