@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RRP Softphone — Exclusão de Dados</title>
+<meta name="description" content="Como solicitar a exclusão dos dados do RRP Softphone, da RRP Systems.">
+<link rel="icon" href="assets/favicon.ico">
+<style>
+  :root {
+    --bg: #14181D;
+    --panel: #1C2128;
+    --border: #2B333D;
+    --text-primary: #E8ECEF;
+    --text-secondary: #8B96A3;
+    --blue: #2E9FDB;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  a { color: var(--blue); }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 48px 24px 64px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 32px; }
+  header img { width: 48px; height: 48px; }
+  h1 { font-size: 26px; margin: 0; }
+  .updated { color: var(--text-secondary); font-size: 14px; margin: 4px 0 0; }
+  h2 { font-size: 18px; margin: 36px 0 10px; }
+  p, li { color: var(--text-primary); }
+  .muted { color: var(--text-secondary); }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 12px 0;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 15px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; }
+  footer { margin-top: 48px; color: var(--text-secondary); font-size: 14px; }
+  @media (max-width: 560px) {
+    table, thead, tbody, tr, th, td { display: block; }
+    thead { display: none; }
+    td { border: none; padding: 4px 0; }
+    tr { border-bottom: 1px solid var(--border); padding: 10px 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <img src="assets/rrp_logo.png" alt="">
+    <div>
+      <h1>Exclusão de Dados</h1>
+      <p class="updated">RRP Softphone · RRP Systems Ltda. · atualizada em 04/10/2026</p>
+    </div>
+  </header>
+
+  <p>
+    Esta página explica como excluir os dados do <strong>RRP Softphone</strong>, aplicativo
+    de telefonia da <strong>RRP Systems Ltda.</strong> (CNPJ 39.539.153/0001-47). O
+    aplicativo não cria contas: o ramal e a senha são fornecidos pela empresa que opera o
+    seu servidor de telefonia (PBX).
+  </p>
+
+  <h2>1. Dados guardados no seu aparelho</h2>
+  <div class="card">
+    No aplicativo, abra <strong>Ajustes → Sair da conta</strong>. Isso cancela o registro do
+    ramal e apaga do aparelho a conta (incluindo a senha), o histórico de chamadas, os
+    contatos e os diagnósticos gravados. Desinstalar o aplicativo também apaga todos esses
+    dados.
+  </div>
+
+  <h2>2. Dados guardados pela RRP Systems</h2>
+  <p>
+    Envie um e-mail para
+    <a href="mailto:suporte@rrpsystems.com.br?subject=Exclus%C3%A3o%20de%20dados%20-%20RRP%20Softphone">suporte@rrpsystems.com.br</a>
+    com o assunto <strong>“Exclusão de dados – RRP Softphone”</strong>, informando o
+    <strong>ramal</strong> e o <strong>servidor/domínio</strong> da conta (por exemplo,
+    2124@empresa.com.br). Se a solicitação partir de outro e-mail que não o usado para
+    enviar diagnósticos, podemos pedir uma confirmação de que a conta é sua.
+    Respondemos confirmando a exclusão.
+  </p>
+
+  <h2>O que é excluído, e quando</h2>
+  <table>
+    <thead><tr><th>Dado</th><th>Onde fica</th><th>Exclusão</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Conta, histórico de chamadas, contatos, preferências e diagnósticos ainda não enviados</td>
+        <td>Somente no seu aparelho</td>
+        <td>Na hora, ao usar “Sair da conta” ou desinstalar o aplicativo</td>
+      </tr>
+      <tr>
+        <td>Identificador de notificação do aparelho (token do Firebase) e registro do ramal</td>
+        <td>Servidor de push da RRP Systems (Android, com “Receber chamadas com o app fechado” ligado)</td>
+        <td>Na hora, ao usar “Sair da conta”. Se o aplicativo for apenas desinstalado,
+          é descartado automaticamente em até 7 dias, quando o registro expira. Também
+          pode ser excluído a pedido, pelo e-mail acima.</td>
+      </tr>
+      <tr>
+        <td>Diagnósticos enviados ao suporte (informações do aparelho e registros técnicos
+          das chamadas)</td>
+        <td>E-mail do suporte da RRP Systems — só existem se você tocou em
+          “Ajustes → Diagnóstico → Enviar”</td>
+        <td>Mantidos enquanto forem úteis ao atendimento e excluídos a pedido, pelo
+          e-mail acima. Não há exclusão automática.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="muted">
+    Registros de chamadas no servidor de telefonia (PBX) são mantidos pela empresa que
+    forneceu o seu ramal; para excluí-los, fale com ela. A RRP Systems não mantém outros
+    dados do aplicativo além dos listados acima. Mais detalhes na
+    <a href="privacidade.html">Política de Privacidade</a>.
+  </p>
+
+  <footer>
+    RRP Systems Ltda. · CNPJ 39.539.153/0001-47 ·
+    <a href="mailto:suporte@rrpsystems.com.br">suporte@rrpsystems.com.br</a> ·
+    <a href="privacidade.html">Política de Privacidade</a>
+  </footer>
+</div>
+</body>
+</html>
