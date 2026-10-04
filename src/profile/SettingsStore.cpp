@@ -177,6 +177,7 @@ void SettingsStore::saveAudioProcessing(const AudioProcessing &processing) {
     settings.setValue("audio/noiseSuppression", processing.noiseSuppression);
     settings.setValue("audio/echoCancellation", processing.echoCancellation);
     settings.setValue("audio/agc", processing.automaticGainControl);
+    settings.setValue("audio/jitterBufferMs", processing.jitterBufferMs);
 }
 
 SettingsStore::AudioProcessing SettingsStore::loadAudioProcessing() {
@@ -185,5 +186,6 @@ SettingsStore::AudioProcessing SettingsStore::loadAudioProcessing() {
     processing.noiseSuppression = settings.value("audio/noiseSuppression", false).toBool();
     processing.echoCancellation = settings.value("audio/echoCancellation", true).toBool();
     processing.automaticGainControl = settings.value("audio/agc", false).toBool();
+    processing.jitterBufferMs = settings.value("audio/jitterBufferMs", 300).toInt();
     return processing;
 }

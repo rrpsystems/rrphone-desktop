@@ -225,6 +225,20 @@ void SipCoreManager::setAudioProcessing(const AudioProcessing &processing) {
     // raises background noise during pauses, which in a shared room is worse
     // than an uneven voice.
     linphone_core_enable_agc(m_core, processing.automaticGainControl ? TRUE : FALSE);
+
+    // Adaptive jitter buffer with a floor. Left alone, liblinphone starts at
+    // 60 ms and shrinks to 20-40 ms on a calm network, so the first delay
+    // spike (common on Wi-Fi) drains it and the voice turns choppy/robotic.
+    // Starting at the chosen size and never going below ~3/4 of it trades a
+    // little latency for clean audio; it still grows to 600 ms on a spike.
+    // Same values as the Android app (LinphoneManager.setJitterBuffer).
+    const int jitterMs = processing.jitterBufferMs > 0 ? processing.jitterBufferMs : 300;
+    linphone_core_enable_audio_adaptive_jittcomp(m_core, TRUE);
+    linphone_core_set_audio_jittcomp(m_core, jitterMs);
+    LinphoneConfig *config = linphone_core_get_config(m_core);
+    linphone_config_set_int(config, "rtp", "jitter_buffer_min_size", jitterMs <= 60 ? 40 : jitterMs * 3 / 4);
+    linphone_config_set_int(config, "rtp", "jitter_buffer_max_size", 600);
+    m_jitterBufferMs = jitterMs;
     logAudioProcessing();
 }
 
@@ -234,6 +248,7 @@ SipCoreManager::AudioProcessing SipCoreManager::audioProcessing() const {
         processing.noiseSuppression = linphone_core_noise_suppression_enabled(m_core);
         processing.echoCancellation = linphone_core_echo_cancellation_enabled(m_core);
         processing.automaticGainControl = linphone_core_agc_enabled(m_core);
+        processing.jitterBufferMs = m_jitterBufferMs;
     }
     return processing;
 }
@@ -245,7 +260,10 @@ void SipCoreManager::logAudioProcessing() {
     const auto onOff = [](bool on) { return on ? QStringLiteral("ligado") : QStringLiteral("desligado"); };
     qInfo().noquote() << "[audio] supressão de ruído:" << onOff(linphone_core_noise_suppression_enabled(m_core))
                       << "| cancelamento de eco:" << onOff(linphone_core_echo_cancellation_enabled(m_core))
-                      << "| AGC:" << onOff(linphone_core_agc_enabled(m_core));
+                      << "| AGC:" << onOff(linphone_core_agc_enabled(m_core))
+                      << "| jitter buffer:" << linphone_core_get_audio_jittcomp(m_core) << "ms (mínimo"
+                      << linphone_config_get_int(linphone_core_get_config(m_core), "rtp", "jitter_buffer_min_size", 0)
+                      << "ms)";
 }
 
 // Plays a short sound through the current output device, without needing a

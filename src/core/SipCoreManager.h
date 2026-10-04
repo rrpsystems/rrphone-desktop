@@ -95,6 +95,9 @@ public:
         bool noiseSuppression = false;
         bool echoCancellation = true;
         bool automaticGainControl = false;
+        // Receive-side jitter buffer: starting size in ms, with a floor at
+        // ~3/4 of it. See setAudioProcessing().
+        int jitterBufferMs = 300;
     };
     void setAudioProcessing(const AudioProcessing &processing);
     AudioProcessing audioProcessing() const;
@@ -272,6 +275,7 @@ private:
     bool m_doNotDisturb = false;
     QString m_callForwardTarget;
     QString m_ringerDeviceId;
+    int m_jitterBufferMs = 300;
     QString m_ringPath;
     QString m_testSoundPath;
     // The engine's own device choice at startup, so "Padrão do sistema" is restorable.

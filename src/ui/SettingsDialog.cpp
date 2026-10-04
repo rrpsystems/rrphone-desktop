@@ -174,6 +174,20 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
            "diferentes do microfone. Em compensação, levanta o ruído de fundo nas\n"
            "pausas — por isso vem desligado."));
 
+    // Estabilidade da voz recebida (jitter buffer). Os mesmos três níveis do
+    // app Android; o valor em ms vai no item, o texto explica o efeito.
+    m_jitterCombo = new QComboBox(this);
+    m_jitterCombo->addItem(tr("Rápida (60 ms)"), 60);
+    m_jitterCombo->addItem(tr("Estável (200 ms)"), 200);
+    m_jitterCombo->addItem(tr("Máxima (300 ms) — padrão"), 300);
+    m_jitterCombo->setToolTip(
+        tr("Quanto o app segura a voz que chega antes de tocar.\n\n"
+           "Mais alto evita voz picotada ou robotizada quando a rede atrasa pacotes\n"
+           "(comum em Wi-Fi), com um pouco mais de atraso na conversa.\n"
+           "Vale a partir da próxima chamada."));
+    auto *jitterForm = new QFormLayout();
+    jitterForm->addRow(tr("Estabilidade da voz recebida"), m_jitterCombo);
+
     auto *audioLayout = new QVBoxLayout();
     audioLayout->addLayout(deviceForm);
     audioLayout->addSpacing(4);
@@ -181,6 +195,8 @@ SettingsDialog::SettingsDialog(QWidget *parent) : QDialog(parent) {
     audioLayout->addWidget(m_noiseSuppressionCheck);
     audioLayout->addWidget(m_echoCancellationCheck);
     audioLayout->addWidget(m_agcCheck);
+    audioLayout->addSpacing(4);
+    audioLayout->addLayout(jitterForm);
 
     // Compact rows, and exactly as tall as the four codecs need.
     m_codecList->setObjectName(QStringLiteral("codecList"));
@@ -509,6 +525,8 @@ void SettingsDialog::setAudioProcessing(const SettingsStore::AudioProcessing &pr
     m_noiseSuppressionCheck->setChecked(processing.noiseSuppression);
     m_echoCancellationCheck->setChecked(processing.echoCancellation);
     m_agcCheck->setChecked(processing.automaticGainControl);
+    const int jitterIndex = m_jitterCombo->findData(processing.jitterBufferMs);
+    m_jitterCombo->setCurrentIndex(jitterIndex >= 0 ? jitterIndex : m_jitterCombo->findData(300));
 }
 
 SettingsStore::AudioProcessing SettingsDialog::audioProcessing() const {
@@ -516,5 +534,6 @@ SettingsStore::AudioProcessing SettingsDialog::audioProcessing() const {
     processing.noiseSuppression = m_noiseSuppressionCheck->isChecked();
     processing.echoCancellation = m_echoCancellationCheck->isChecked();
     processing.automaticGainControl = m_agcCheck->isChecked();
+    processing.jitterBufferMs = m_jitterCombo->currentData().toInt();
     return processing;
 }

@@ -42,6 +42,9 @@ public:
         bool noiseSuppression = false;
         bool echoCancellation = true;
         bool automaticGainControl = false;
+        // Jitter buffer de recepção, em ms (60, 200 ou 300). Padrão 300: a
+        // maioria usa notebook em Wi-Fi, e qualidade vale mais que atraso.
+        int jitterBufferMs = 300;
     };
     static void saveAudioProcessing(const AudioProcessing &processing);
     static AudioProcessing loadAudioProcessing();

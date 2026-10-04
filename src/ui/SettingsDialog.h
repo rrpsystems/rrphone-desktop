@@ -93,6 +93,7 @@ private:
     QCheckBox *m_noiseSuppressionCheck;
     QCheckBox *m_echoCancellationCheck;
     QCheckBox *m_agcCheck;
+    QComboBox *m_jitterCombo;
     QLabel *m_audioTestLabel;
     QLabel *m_ringtoneLabel;
     QString m_ringtonePath; // empty = the ringtone shipped with the app

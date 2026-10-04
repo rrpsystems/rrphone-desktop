@@ -190,7 +190,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent) {
 
     const SettingsStore::AudioProcessing savedProcessing = SettingsStore::loadAudioProcessing();
     m_sipCore->setAudioProcessing({savedProcessing.noiseSuppression, savedProcessing.echoCancellation,
-                                   savedProcessing.automaticGainControl});
+                                   savedProcessing.automaticGainControl, savedProcessing.jitterBufferMs});
 
     bool savedDnd = false;
     QString savedForward;
@@ -1643,7 +1643,7 @@ void MainWindow::onSettingsApplied(const AccountProfile &profile) {
     const SettingsStore::AudioProcessing processing = m_settingsDialog->audioProcessing();
     SettingsStore::saveAudioProcessing(processing);
     m_sipCore->setAudioProcessing({processing.noiseSuppression, processing.echoCancellation,
-                                   processing.automaticGainControl});
+                                   processing.automaticGainControl, processing.jitterBufferMs});
     SettingsStore::saveReplaceLocalContacts(m_settingsDialog->replaceLocalContacts());
 }
 
