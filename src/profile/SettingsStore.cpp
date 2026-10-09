@@ -39,7 +39,7 @@ void SettingsStore::saveProfile(const AccountProfile &profile) {
     settings.sync();
 
     // Password goes to the Credential Manager, never here.
-    CredentialStore::savePassword(QString::fromLatin1(CredentialStore::kTarget),
+    CredentialStore::savePassword(CredentialStore::targetFor(profile.username, profile.domain),
                                    profile.username, profile.password);
 }
 
@@ -75,7 +75,18 @@ bool SettingsStore::loadProfile(AccountProfile *profileOut) {
     }
     settings.endArray();
 
-    CredentialStore::loadPassword(QString::fromLatin1(CredentialStore::kTarget), &profile.password);
+    const QString target = CredentialStore::targetFor(username, domain);
+    if (!CredentialStore::loadPassword(target, &profile.password)) {
+        // Saved before 1.0.6, under the shared name: use it only if it is this
+        // account's, and move it to the account's own name.
+        QString legacyUser;
+        QString legacyPassword;
+        if (CredentialStore::loadPassword(QString::fromLatin1(CredentialStore::kTarget), &legacyPassword, &legacyUser) &&
+            legacyUser == username) {
+            profile.password = legacyPassword;
+            CredentialStore::savePassword(target, username, legacyPassword);
+        }
+    }
 
     if (profileOut != nullptr) {
         *profileOut = profile;
@@ -85,9 +96,18 @@ bool SettingsStore::loadProfile(AccountProfile *profileOut) {
 
 void SettingsStore::clearProfile() {
     QSettings settings;
+    const QString username = settings.value(kKeyUsername).toString();
+    const QString domain = settings.value(kKeyDomain).toString();
+    if (!username.isEmpty()) {
+        CredentialStore::removePassword(CredentialStore::targetFor(username, domain));
+        QString legacyUser;
+        if (CredentialStore::loadPassword(QString::fromLatin1(CredentialStore::kTarget), nullptr, &legacyUser) &&
+            legacyUser == username) {
+            CredentialStore::removePassword(QString::fromLatin1(CredentialStore::kTarget));
+        }
+    }
     settings.clear();
     settings.sync();
-    CredentialStore::removePassword(QString::fromLatin1(CredentialStore::kTarget));
 }
 
 void SettingsStore::saveVolumes(int speakerPercent, int micPercent) {

@@ -30,7 +30,11 @@ bool CredentialStore::savePassword(const QString &target, const QString &user, c
     return CredWriteW(&cred, 0) != FALSE;
 }
 
-bool CredentialStore::loadPassword(const QString &target, QString *passwordOut) {
+QString CredentialStore::targetFor(const QString &user, const QString &domain) {
+    return QStringLiteral("%1:%2@%3").arg(QString::fromLatin1(kTarget), user, domain.toLower());
+}
+
+bool CredentialStore::loadPassword(const QString &target, QString *passwordOut, QString *userOut) {
     PCREDENTIALW cred = nullptr;
     if (CredReadW(asWide(target), CRED_TYPE_GENERIC, 0, &cred) == FALSE) {
         return false;
@@ -39,6 +43,10 @@ bool CredentialStore::loadPassword(const QString &target, QString *passwordOut) 
     if (passwordOut != nullptr && cred->CredentialBlob != nullptr && cred->CredentialBlobSize > 0) {
         *passwordOut = QString::fromUtf16(reinterpret_cast<const char16_t *>(cred->CredentialBlob),
                                            static_cast<qsizetype>(cred->CredentialBlobSize / sizeof(ushort)));
+    }
+
+    if (userOut != nullptr) {
+        *userOut = cred->UserName != nullptr ? QString::fromWCharArray(cred->UserName) : QString();
     }
 
     CredFree(cred);
