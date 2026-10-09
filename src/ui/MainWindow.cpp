@@ -33,6 +33,7 @@
 #include "profile/SettingsStore.h"
 #include "contacts/LocalContactsStore.h"
 #include "history/CallHistoryStore.h"
+#include "platform/AppPackage.h"
 
 #ifdef Q_OS_WIN
 // Depois dos headers do Qt de propósito: windows.h define macros (min/max e
@@ -1698,10 +1699,30 @@ void MainWindow::onContactsFetchFailed(const QString &reason) {
 // --- Autostart (D-11) -----------------------------------------------------
 
 bool MainWindow::isAutoStartEnabled() const {
+    // Microsoft Store (MSIX): the Run key is virtualized inside the package
+    // and Windows never reads it; the package's StartupTask is what counts.
+    if (AppPackage::isPackaged()) {
+        return AppPackage::startupState() == AppPackage::StartupState::Enabled;
+    }
     return autoStartSettings().contains(kAutoStartKey);
 }
 
 void MainWindow::setAutoStartEnabled(bool enabled) {
+    if (AppPackage::isPackaged()) {
+        const AppPackage::StartupState state = AppPackage::setStartupEnabled(enabled);
+        if (enabled && state != AppPackage::StartupState::Enabled) {
+            // Turned off by the user in Windows Settings (or by policy): an
+            // app can't override that, only point the way.
+            {
+                QSignalBlocker blocker(m_autoStartAction);
+                m_autoStartAction->setChecked(false);
+            }
+            QMessageBox::information(this, tr("Iniciar com o Windows"),
+                                     tr("O Windows não deixou ativar. Ligue o RRP Softphone em\n"
+                                        "Configurações do Windows → Aplicativos → Inicialização."));
+        }
+        return;
+    }
     QSettings settings = autoStartSettings();
     if (enabled) {
         settings.setValue(kAutoStartKey, QDir::toNativeSeparators(QCoreApplication::applicationFilePath()));

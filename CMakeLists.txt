@@ -179,6 +179,8 @@ add_executable(RRPSoftphone WIN32
     src/ui/HistoryPanel.cpp
     src/history/CallHistoryStore.h
     src/history/CallHistoryStore.cpp
+    src/platform/AppPackage.h
+    src/platform/AppPackage.cpp
     resources/resources.qrc
     "${CMAKE_CURRENT_BINARY_DIR}/rrp.rc"
 )
@@ -196,6 +198,9 @@ target_link_libraries(RRPSoftphone PRIVATE
 if(WIN32)
     # CredWriteW/CredReadW (Windows Credential Manager) live in advapi32.
     target_link_libraries(RRPSoftphone PRIVATE advapi32)
+    # MSIX (Microsoft Store): package detection and the StartupTask behind
+    # "Iniciar com o Windows" (src/platform/AppPackage.cpp, C++/WinRT).
+    target_link_libraries(RRPSoftphone PRIVATE windowsapp)
 endif()
 
 # windeployqt copies the Qt runtime (Qt6Core.dll, platform/imageformat/svg

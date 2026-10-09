@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifesto do pacote MSIX da Microsoft Store. installer/make-msix.ps1 copia
+  este arquivo para installer/Output/msix trocando @VERSION@ pela versão do
+  CMakeLists.
+
+  Identity Name/Publisher e PublisherDisplayName vêm do Partner Center
+  (Produto → Identidade do produto) e precisam ser exatamente estes: a Store
+  recusa o pacote se não baterem. O pacote vai sem assinatura — a Store assina.
+-->
+<Package
+  xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+  xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+  xmlns:desktop="http://schemas.microsoft.com/appx/manifest/desktop/windows10"
+  xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+  IgnorableNamespaces="uap desktop rescap">
+
+  <Identity
+    Name="RRPSYSTEMSLTDA.RRPSoftphone"
+    Publisher="CN=CA9EDEDB-A730-4867-8ABA-27E6B072AB69"
+    Version="@VERSION@"
+    ProcessorArchitecture="x64" />
+
+  <Properties>
+    <DisplayName>RRP Softphone</DisplayName>
+    <PublisherDisplayName>RRP SYSTEMS LTDA</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+  </Properties>
+
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+
+  <Resources>
+    <Resource Language="pt-BR" />
+  </Resources>
+
+  <Applications>
+    <Application Id="RRPSoftphone" Executable="RRPSoftphone.exe" EntryPoint="Windows.FullTrustApplication">
+      <uap:VisualElements
+        DisplayName="RRP Softphone"
+        Description="Softphone SIP para o seu ramal"
+        BackgroundColor="transparent"
+        Square150x150Logo="Assets\Square150x150Logo.png"
+        Square44x44Logo="Assets\Square44x44Logo.png">
+        <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" />
+      </uap:VisualElements>
+      <Extensions>
+        <!-- "Iniciar com o Windows" no pacote (a chave Run do registro é
+             virtualizada e o Windows não a lê). Desligada até o usuário
+             ligar pelo menu; ver src/platform/AppPackage.cpp. -->
+        <desktop:Extension Category="windows.startupTask" Executable="RRPSoftphone.exe" EntryPoint="Windows.FullTrustApplication">
+          <desktop:StartupTask TaskId="RRPSoftphoneStartup" Enabled="false" DisplayName="RRP Softphone" />
+        </desktop:Extension>
+      </Extensions>
+    </Application>
+  </Applications>
+
+  <Capabilities>
+    <Capability Name="internetClient" />
+    <Capability Name="internetClientServer" />
+    <Capability Name="privateNetworkClientServer" />
+    <rescap:Capability Name="runFullTrust" />
+    <DeviceCapability Name="microphone" />
+  </Capabilities>
+</Package>
