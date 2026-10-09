@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
-project(RRPSoftphone VERSION 1.0.5 LANGUAGES CXX)
+project(RRPSoftphone VERSION 1.0.6 LANGUAGES CXX)
 
 # Titular do copyright, num único lugar: entra nas propriedades do executável,
 # na tela "Sobre" e nos avisos de licença. Trocar a razão social é mudar aqui.
@@ -234,6 +234,8 @@ add_executable(sip_register_test
     src/core/SipCoreManager.cpp
     src/core/CodecInfo.h
     src/core/CodecInfo.cpp
+    src/core/Logger.h
+    src/core/Logger.cpp
 )
 target_include_directories(sip_register_test PRIVATE src)
 target_link_libraries(sip_register_test PRIVATE Qt6::Core linphone_sdk)

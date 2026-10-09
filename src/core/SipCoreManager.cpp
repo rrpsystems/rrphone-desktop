@@ -1,9 +1,11 @@
 #include "SipCoreManager.h"
+#include "Logger.h"
 
 #include <QDebug>
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QStringList>
 #include <QRegularExpression>
 
@@ -72,8 +74,14 @@ void SipCoreManager::start() {
     // RRP_SIP_DEBUG=1 turns on the full debug trace (REGISTER/INVITE exchanges
     // included). Off by default because it is extremely chatty; warnings and
     // errors are always kept, since those are what diagnose a broken install.
-    linphone_logging_service_set_log_level(
-        logService, qEnvironmentVariableIsSet("RRP_SIP_DEBUG") ? LinphoneLogLevelDebug : LinphoneLogLevelWarning);
+    // A file named "sip-debug" next to the log does the same: an app started
+    // from the Start menu (and every Microsoft Store/MSIX install) never sees
+    // a variable set in a terminal.
+    const QString debugFlag = QFileInfo(Logger::logFilePath()).absolutePath() + QStringLiteral("/sip-debug");
+    const bool sipDebug = qEnvironmentVariableIsSet("RRP_SIP_DEBUG") || QFileInfo::exists(debugFlag) ||
+                          QCoreApplication::arguments().contains(QStringLiteral("--sip-debug"));
+    qInfo().noquote() << "[sip] log detalhado:" << (sipDebug ? "ligado" : "desligado") << "| sinalizador:" << debugFlag;
+    linphone_logging_service_set_log_level(logService, sipDebug ? LinphoneLogLevelDebug : LinphoneLogLevelWarning);
 
     // liblinphone needs to find its bundled grammars (SIP/SDP/vCard parsing),
     // sound files, and root CA bundle under a "top resources dir" — without
