@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>RRP Softphone — Download</title>
-<meta name="description" content="RRP Softphone: softphone SIP para Windows, leve e direto ao ponto. Transferência com consulta, chamada em espera, G.729 e código aberto.">
+<meta name="description" content="RRP Softphone: softphone SIP para Windows e Android. Transferência com consulta, conferência a três, chamada em espera, G.729 e código aberto.">
 <link rel="icon" href="assets/favicon.ico">
 <style>
   :root {
@@ -37,7 +37,7 @@
       radial-gradient(ellipse 900px 500px at 50% -10%, rgba(44,158,130,0.18), transparent 60%),
       var(--bg);
   }
-  header.hero img { width: 108px; height: 108px; display: block; margin: 0 auto 20px; }
+  header.hero img.logo { width: 108px; height: 108px; display: block; margin: 0 auto 20px; }
   header.hero h1 { font-size: 30px; margin: 0 0 8px; letter-spacing: -0.01em; }
   header.hero p.tagline { color: var(--text-secondary); font-size: 17px; margin: 0 0 36px; }
 
@@ -63,6 +63,13 @@
     font-size: 13.5px;
   }
   .download-meta a { color: var(--text-secondary); text-decoration: underline; }
+
+  /* Selos oficiais das lojas: imagens da Microsoft e do Google, sem alteração. */
+  .store-badges { display: flex; gap: 16px; justify-content: center; align-items: center; flex-wrap: wrap; }
+  .store-badges img { display: block; height: 56px; width: auto; }
+  .store-badges .play img { height: 82px; margin: -13px; } /* o PNG do Google tem margem própria */
+  .alt-download { margin-top: 18px; font-size: 14px; color: var(--text-secondary); }
+  .alt-download a { color: var(--text-primary); }
 
   .requirements {
     margin-top: 28px;
@@ -137,27 +144,30 @@
 
 <header class="hero">
   <div class="wrap">
-    <img src="assets/rrp_logo.png" alt="RRP Systems" width="108" height="108">
+    <img class="logo" src="assets/rrp_logo.png" alt="RRP Systems" width="108" height="108">
     <h1>RRP Softphone</h1>
-    <p class="tagline">Softphone SIP para Windows. Leve, direto ao ponto, código aberto.</p>
+    <p class="tagline">Seu ramal no computador. Leve, direto ao ponto, código aberto.</p>
 
-    <a class="download-btn" id="download-btn"
-       href="https://github.com/RRPSystems/rrphone-desktop/releases/latest/download/RRPSoftphone-setup.exe">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-        <polyline points="7 10 12 15 17 10"></polyline>
-        <line x1="12" y1="15" x2="12" y2="3"></line>
-      </svg>
-      <span>Baixar para Windows</span>
-    </a>
+    <div class="store-badges">
+      <a href="https://apps.microsoft.com/detail/9NDMFLZHMFQZ?mode=direct" title="Baixar na Microsoft Store">
+        <img src="https://get.microsoft.com/images/pt-br%20dark.svg" alt="Baixar na Microsoft Store">
+      </a>
+      <!-- Google Play: volta quando o app sair do teste interno para Produção
+           (antes disso a página da loja dá "Não encontrado").
+      <a class="play" href="https://play.google.com/store/apps/details?id=com.rrpsystems.rrphone" title="Disponível no Google Play">
+        <img src="https://play.google.com/intl/en_us/badges/static/images/badges/pt-br_badge_web_generic.png" alt="Disponível no Google Play">
+      </a>
+      -->
+    </div>
 
+    <div class="alt-download">
+      Prefere o instalador?
+      <a id="download-btn"
+         href="https://github.com/RRPSystems/rrphone-desktop/releases/latest/download/RRPSoftphone-setup.exe">Baixar o .exe para Windows</a>
+    </div>
     <div class="download-meta" id="download-meta">
       Windows 10/11 · 64-bit ·
       <a href="https://github.com/RRPSystems/rrphone-desktop/releases">ver todas as versões</a>
-    </div>
-
-    <div class="requirements">
-      O instalador cuida do runtime necessário automaticamente.
     </div>
   </div>
 </header>
@@ -167,6 +177,7 @@
     <h2>Recursos</h2>
     <ul class="features">
       <li>Transferência com consulta, num fluxo só</li>
+      <li>Conferência a três</li>
       <li>Chamada em espera (atender, recusar, alternar)</li>
       <li>G.729 e G.711, sem custo de transcodificação no PBX</li>
       <li>Não perturbe e encaminhamento incondicional (siga-me)</li>
@@ -174,6 +185,8 @@
       <li>Histórico local e agenda via XML remoto</li>
       <li>Provisionamento por arquivo, criptografado (AES-256-GCM)</li>
       <li>Cancelamento de eco e supressão de ruído opcionais</li>
+      <li>Voz estável em Wi-Fi instável (jitter buffer ajustável)</li>
+      <li>No Android, chamadas com o app fechado (push, com o RRPBX)</li>
     </ul>
   </div>
 </section>
@@ -182,10 +195,14 @@
   <div class="wrap">
     <h2>Instalação</h2>
     <div class="smartscreen">
-      O instalador ainda não é assinado digitalmente, então o Windows pode
-      mostrar <strong>"O Windows protegeu o computador"</strong> ao abri-lo.
-      Isso é esperado: clique em <strong>Mais informações</strong> e depois em
-      <strong>Executar assim mesmo</strong>.
+      <strong>Pela Microsoft Store</strong> a instalação é direta e o app se
+      atualiza sozinho. Para empresas que bloqueiam a Store ou instalam por
+      ferramenta de gestão, há o instalador <strong>.exe</strong>: ele ainda não
+      é assinado digitalmente, então o Windows pode mostrar
+      <strong>"O Windows protegeu o computador"</strong> ao abri-lo. Isso é
+      esperado: clique em <strong>Mais informações</strong> e depois em
+      <strong>Executar assim mesmo</strong>. O instalador cuida do runtime
+      necessário automaticamente.
     </div>
   </div>
 </section>
@@ -206,7 +223,8 @@
 
 <footer>
   <div class="brand">RRP Systems Ltda.</div>
-  <div>CNPJ 39.539.153/0001-47 · <a href="mailto:contato@rrpsystems.com.br">contato@rrpsystems.com.br</a></div>
+  <div>CNPJ 39.539.153/0001-47 · <a href="mailto:suporte@rrpsystems.com.br">suporte@rrpsystems.com.br</a> ·
+    <a href="privacidade.html">Privacidade</a> · <a href="exclusao-de-dados.html">Exclusão de dados</a></div>
   <div style="margin-top:8px;">© 2026 RRP Systems Ltda. — RRP Softphone é software livre, sem garantia.</div>
 </footer>
 
